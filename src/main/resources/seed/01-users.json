@@ -1,0 +1,166 @@
+{
+  "users": [
+    {
+      "fullName": "System Admin",
+      "email": "admin@hitech.com",
+      "password": "Admin2000.",
+      "phoneNumber": "0710000001",
+      "bio": "Platform administrator for Hi-Tech Institute.",
+      "role": "ADMIN",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Nimali Perera",
+      "email": "nimali.perera@hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0712345671",
+      "bio": "Senior instructor for software engineering and Java.",
+      "role": "INSTRUCTOR",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Dinesh Fernando",
+      "email": "dinesh.fernando@hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0712345672",
+      "bio": "Mathematics and analytics instructor.",
+      "role": "INSTRUCTOR",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Farah Iqbal",
+      "email": "farah.iqbal@hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0712345673",
+      "bio": "Finance and student support coordinator.",
+      "role": "SUPPORT_STAFF",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Kasun Jayasinghe",
+      "email": "kasun.jayasinghe@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451001",
+      "bio": "Foundation student interested in backend development.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Ayesha Silva",
+      "email": "ayesha.silva@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451002",
+      "bio": "Business analytics student.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Tharindu Wijesinghe",
+      "email": "tharindu.w@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451003",
+      "bio": "Student currently verifying account details.",
+      "role": "STUDENT",
+      "accountStatus": "PENDING_VERIFICATION"
+    },
+    {
+      "fullName": "Meera Ramanathan",
+      "email": "meera.r@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451004",
+      "bio": "Continuing learner returning for a second course.",
+      "role": "STUDENT",
+      "accountStatus": "INACTIVE"
+    },
+    {
+      "fullName": "Chamod Lakshan",
+      "email": "chamod.lakshan@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451005",
+      "bio": "Software engineering student focused on frontend development.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Isuri Nanayakkara",
+      "email": "isuri.nanayakkara@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451006",
+      "bio": "Data analytics student interested in dashboards and reporting.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Ruwan Bandara",
+      "email": "ruwan.bandara@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451007",
+      "bio": "Part-time learner building database and cloud skills.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Anjali Dias",
+      "email": "anjali.dias@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451008",
+      "bio": "Business student learning accounting and communication.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Naveen Rajapaksha",
+      "email": "naveen.rajapaksha@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451009",
+      "bio": "Student preparing for backend and database project work.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Shalini Kumar",
+      "email": "shalini.kumar@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451010",
+      "bio": "Learner interested in analytics automation with Python.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Malith Senanayake",
+      "email": "malith.senanayake@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451011",
+      "bio": "Student exploring full-stack development workflows.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Kaveesha Peiris",
+      "email": "kaveesha.peiris@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451012",
+      "bio": "Course participant focused on practical assignments.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Yusuf Ahamed",
+      "email": "yusuf.ahamed@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451013",
+      "bio": "Student interested in cloud deployment and DevOps basics.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    },
+    {
+      "fullName": "Piumi Herath",
+      "email": "piumi.herath@student.hitech.lk",
+      "password": "Password2000.",
+      "phoneNumber": "0773451014",
+      "bio": "Student building a foundation in web and business systems.",
+      "role": "STUDENT",
+      "accountStatus": "ACTIVE"
+    }
+  ]
+}

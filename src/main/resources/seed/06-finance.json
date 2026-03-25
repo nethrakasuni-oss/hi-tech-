@@ -1,0 +1,88 @@
+{
+  "paymentIntents": [
+    {
+      "student": "kasun.jayasinghe@student.hitech.lk",
+      "courseCode": "SE-JAVA-101",
+      "amount": "45000.00",
+      "currency": "LKR",
+      "status": "CONFIRMED",
+      "idempotencyKey": "seed-kasun-java-2026-001",
+      "expiresAt": "2026-04-24T23:59:00"
+    },
+    {
+      "student": "ayesha.silva@student.hitech.lk",
+      "courseCode": "SE-JAVA-101",
+      "amount": "45000.00",
+      "currency": "LKR",
+      "status": "CONFIRMED",
+      "idempotencyKey": "seed-ayesha-java-2026-002",
+      "expiresAt": "2026-04-24T23:59:00"
+    },
+    {
+      "student": "ayesha.silva@student.hitech.lk",
+      "courseCode": "DA-BIZ-201",
+      "amount": "38000.00",
+      "currency": "LKR",
+      "status": "FAILED",
+      "idempotencyKey": "seed-ayesha-analytics-2026-003",
+      "expiresAt": "2026-04-24T23:59:00"
+    }
+  ],
+  "payments": [
+    {
+      "idempotencyKey": "seed-kasun-java-2026-001",
+      "amount": "45000.00",
+      "currency": "LKR",
+      "status": "SUCCESS",
+      "paymentMethod": "MOCK_CARD",
+      "cardLastFour": "4242",
+      "cardBrand": "VISA",
+      "gatewayReference": "gw_seed_2026_0001"
+    },
+    {
+      "idempotencyKey": "seed-ayesha-java-2026-002",
+      "amount": "45000.00",
+      "currency": "LKR",
+      "status": "SUCCESS",
+      "paymentMethod": "MOCK_CARD",
+      "cardLastFour": "5454",
+      "cardBrand": "MASTERCARD",
+      "gatewayReference": "gw_seed_2026_0002"
+    },
+    {
+      "idempotencyKey": "seed-ayesha-analytics-2026-003",
+      "amount": "38000.00",
+      "currency": "LKR",
+      "status": "FAILED",
+      "paymentMethod": "MOCK_CARD",
+      "cardLastFour": "0002",
+      "cardBrand": "VISA",
+      "gatewayReference": "gw_seed_2026_0003",
+      "failureReason": "Mock gateway declined the card."
+    }
+  ],
+  "invoices": [
+    {
+      "gatewayReference": "gw_seed_2026_0001",
+      "invoiceNumber": "INV-2026-00001",
+      "subtotal": "45000.00",
+      "taxRate": "0.00",
+      "taxAmount": "0.00",
+      "totalAmount": "45000.00",
+      "currency": "LKR",
+      "invoiceHtml": "<h1>Invoice INV-2026-00001</h1><p>Java Foundations enrollment for Kasun Jayasinghe.</p>",
+      "status": "GENERATED"
+    },
+    {
+      "gatewayReference": "gw_seed_2026_0002",
+      "invoiceNumber": "INV-2026-00002",
+      "subtotal": "45000.00",
+      "taxRate": "0.00",
+      "taxAmount": "0.00",
+      "totalAmount": "45000.00",
+      "currency": "LKR",
+      "invoiceHtml": "<h1>Invoice INV-2026-00002</h1><p>Java Foundations enrollment for Ayesha Silva.</p>",
+      "status": "GENERATED"
+    }
+  ]
+}

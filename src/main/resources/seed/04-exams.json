@@ -1,0 +1,163 @@
+{
+  "exams": [
+    {
+      "courseCode": "SE-JAVA-101",
+      "createdBy": "nimali.perera@hitech.lk",
+      "title": "Java Foundations Quiz 1",
+      "description": "Covers setup, primitive types, variables, and basic control flow.",
+      "totalMarks": "20.00",
+      "passingGradePct": "60.00",
+      "timeLimitMinutes": 30,
+      "maxAttempts": 2,
+      "availableFrom": "2026-04-20T08:00:00",
+      "availableUntil": "2026-05-10T23:59:00",
+      "resultRelease": "IMMEDIATE",
+      "resultsReleased": true,
+      "status": "ACTIVE",
+      "useRandomization": true
+    },
+    {
+      "courseCode": "DA-BIZ-201",
+      "createdBy": "dinesh.fernando@hitech.lk",
+      "title": "Analytics Case Reflection",
+      "description": "Short written reflection on a small retail dashboard.",
+      "totalMarks": "30.00",
+      "passingGradePct": "50.00",
+      "timeLimitMinutes": 45,
+      "maxAttempts": 1,
+      "availableFrom": "2026-04-25T09:00:00",
+      "availableUntil": "2026-05-15T23:59:00",
+      "resultRelease": "MANUAL",
+      "resultsReleased": false,
+      "status": "DRAFT",
+      "useRandomization": false
+    }
+  ],
+  "questions": [
+    {
+      "courseCode": "SE-JAVA-101",
+      "examTitle": "Java Foundations Quiz 1",
+      "questionType": "MCQ",
+      "questionText": "Which keyword declares a class in Java?",
+      "points": "5.00",
+      "poolName": "Syntax",
+      "sortOrder": 1,
+      "options": [
+        {"optionText": "class", "correct": true, "sortOrder": 1},
+        {"optionText": "define", "correct": false, "sortOrder": 2},
+        {"optionText": "object", "correct": false, "sortOrder": 3},
+        {"optionText": "module", "correct": false, "sortOrder": 4}
+      ]
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "examTitle": "Java Foundations Quiz 1",
+      "questionType": "SHORT_ANSWER",
+      "questionText": "Name the primitive type commonly used for true or false values.",
+      "points": "5.00",
+      "poolName": "Types",
+      "sortOrder": 2,
+      "shortAnswerMethod": "EXACT_MATCH",
+      "expectedAnswer": "boolean"
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "examTitle": "Java Foundations Quiz 1",
+      "questionType": "ESSAY",
+      "questionText": "Explain why clear method names improve maintainability.",
+      "points": "10.00",
+      "poolName": "Design",
+      "sortOrder": 3,
+      "rubric": "Award marks for clarity, examples, and connection to team readability."
+    },
+    {
+      "courseCode": "DA-BIZ-201",
+      "examTitle": "Analytics Case Reflection",
+      "questionType": "FILE_UPLOAD",
+      "questionText": "Upload your annotated KPI dashboard as a PDF.",
+      "points": "30.00",
+      "poolName": "Case Study",
+      "sortOrder": 1,
+      "rubric": "Assess layout, metric selection, and written interpretation.",
+      "allowedFileTypes": "pdf",
+      "maxFileSizeMb": 10
+    }
+  ],
+  "poolConfigs": [
+    {
+      "courseCode": "SE-JAVA-101",
+      "examTitle": "Java Foundations Quiz 1",
+      "poolName": "Syntax",
+      "drawCount": 1
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "examTitle": "Java Foundations Quiz 1",
+      "poolName": "Types",
+      "drawCount": 1
+    }
+  ],
+  "attempts": [
+    {
+      "courseCode": "SE-JAVA-101",
+      "examTitle": "Java Foundations Quiz 1",
+      "student": "kasun.jayasinghe@student.hitech.lk",
+      "status": "GRADED",
+      "submittedAt": "2026-04-22T19:30:00",
+      "totalScore": "16.00",
+      "percentage": "80.00",
+      "passed": true,
+      "expiresAt": "2026-04-22T20:00:00"
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "examTitle": "Java Foundations Quiz 1",
+      "student": "ayesha.silva@student.hitech.lk",
+      "status": "SUBMITTED",
+      "submittedAt": "2026-04-23T18:10:00",
+      "totalScore": "10.00",
+      "percentage": "50.00",
+      "passed": false,
+      "expiresAt": "2026-04-23T18:40:00"
+    }
+  ],
+  "attemptAnswers": [
+    {
+      "courseCode": "SE-JAVA-101",
+      "examTitle": "Java Foundations Quiz 1",
+      "student": "kasun.jayasinghe@student.hitech.lk",
+      "questionText": "Which keyword declares a class in Java?",
+      "answerText": "class",
+      "displayOrder": 1,
+      "gradeStatus": "CORRECT",
+      "scoreAwarded": "5.00",
+      "feedback": "Correct.",
+      "gradedBy": "nimali.perera@hitech.lk",
+      "gradedAt": "2026-04-22T20:10:00"
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "examTitle": "Java Foundations Quiz 1",
+      "student": "kasun.jayasinghe@student.hitech.lk",
+      "questionText": "Explain why clear method names improve maintainability.",
+      "answerText": "Clear names make intent visible and reduce the need for comments during maintenance.",
+      "displayOrder": 3,
+      "gradeStatus": "MANUAL_GRADED",
+      "scoreAwarded": "6.00",
+      "feedback": "Good core idea; add a concrete example next time.",
+      "gradedBy": "nimali.perera@hitech.lk",
+      "gradedAt": "2026-04-22T20:12:00"
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "examTitle": "Java Foundations Quiz 1",
+      "student": "ayesha.silva@student.hitech.lk",
+      "questionText": "Explain why clear method names improve maintainability.",
+      "answerText": "They help other developers understand what the code is doing.",
+      "displayOrder": 3,
+      "flagged": true,
+      "gradeStatus": "MANUAL_PENDING",
+      "scoreAwarded": "0.00"
+    }
+  ]
+}

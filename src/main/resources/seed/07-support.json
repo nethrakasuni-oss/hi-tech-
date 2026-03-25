@@ -1,0 +1,154 @@
+{
+  "articles": [
+    {
+      "title": "How to reset your password",
+      "category": "ACCOUNT",
+      "content": "Use Forgot Password from the login screen, then follow the secure email link within one hour.",
+      "tags": "account,password,login",
+      "status": "PUBLISHED",
+      "version": 2,
+      "viewCount": 45,
+      "helpfulYes": 12,
+      "helpfulNo": 1,
+      "author": "farah.iqbal@hitech.lk"
+    },
+    {
+      "title": "When will my invoice appear?",
+      "category": "FINANCE",
+      "content": "Invoices are generated immediately after a successful payment and can be opened from Finance.",
+      "tags": "invoice,payment,finance",
+      "status": "PUBLISHED",
+      "version": 1,
+      "viewCount": 31,
+      "helpfulYes": 9,
+      "helpfulNo": 0,
+      "author": "farah.iqbal@hitech.lk"
+    },
+    {
+      "title": "Submitting file upload exams",
+      "category": "EXAMS",
+      "content": "Upload only the requested file type and keep the file below the limit shown on the exam page.",
+      "tags": "exam,upload,pdf",
+      "status": "DRAFT",
+      "version": 1,
+      "viewCount": 0,
+      "helpfulYes": 0,
+      "helpfulNo": 0,
+      "author": "nimali.perera@hitech.lk"
+    }
+  ],
+  "availability": [
+    {
+      "instructor": "nimali.perera@hitech.lk",
+      "dayOfWeek": "TUESDAY",
+      "startTime": "14:00",
+      "endTime": "17:00",
+      "blocked": false,
+      "sessionDurationMinutes": 30,
+      "bufferMinutes": 10
+    },
+    {
+      "instructor": "dinesh.fernando@hitech.lk",
+      "dayOfWeek": "THURSDAY",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "blocked": false,
+      "sessionDurationMinutes": 45,
+      "bufferMinutes": 15
+    },
+    {
+      "instructor": "nimali.perera@hitech.lk",
+      "blockedDate": "2026-05-01",
+      "blocked": true,
+      "sessionDurationMinutes": 30,
+      "bufferMinutes": 10
+    }
+  ],
+  "tickets": [
+    {
+      "ticketNumber": "TKT-2026-00001",
+      "student": "kasun.jayasinghe@student.hitech.lk",
+      "assignedTo": "farah.iqbal@hitech.lk",
+      "category": "TECHNICAL",
+      "subject": "Cannot open Java video",
+      "description": "The Week 2 control flow video opens a blank screen in Chrome.",
+      "priority": "HIGH",
+      "status": "IN_PROGRESS",
+      "messages": [
+        {
+          "sender": "kasun.jayasinghe@student.hitech.lk",
+          "body": "The video works on my phone but not on my laptop.",
+          "internal": false
+        },
+        {
+          "sender": "farah.iqbal@hitech.lk",
+          "body": "Asked student to test after clearing browser cache.",
+          "internal": true
+        }
+      ]
+    },
+    {
+      "ticketNumber": "TKT-2026-00002",
+      "student": "ayesha.silva@student.hitech.lk",
+      "assignedTo": "farah.iqbal@hitech.lk",
+      "category": "FINANCE",
+      "subject": "Payment failed but card was charged",
+      "description": "Student sees a failed payment in LMS and a pending hold on the bank app.",
+      "priority": "CRITICAL",
+      "status": "PENDING_STUDENT",
+      "messages": [
+        {
+          "sender": "ayesha.silva@student.hitech.lk",
+          "body": "I can share the bank reference if needed.",
+          "internal": false
+        }
+      ]
+    },
+    {
+      "ticketNumber": "TKT-2026-00003",
+      "student": "meera.r@student.hitech.lk",
+      "assignedTo": "farah.iqbal@hitech.lk",
+      "category": "ENROLLMENT",
+      "subject": "Restore archived communication course access",
+      "description": "Student requested read-only access to download certificates.",
+      "priority": "LOW",
+      "status": "RESOLVED",
+      "resolutionNote": "Certificate link was emailed and access request closed.",
+      "resolvedAt": "2026-04-23T10:15:00",
+      "messages": []
+    }
+  ],
+  "appointments": [
+    {
+      "student": "kasun.jayasinghe@student.hitech.lk",
+      "instructor": "nimali.perera@hitech.lk",
+      "appointmentDate": "2026-04-28",
+      "startTime": "14:00",
+      "endTime": "14:30",
+      "reason": "COURSE_QUERY",
+      "notes": "Needs help choosing a mini project topic.",
+      "status": "CONFIRMED"
+    },
+    {
+      "student": "ayesha.silva@student.hitech.lk",
+      "instructor": "dinesh.fernando@hitech.lk",
+      "appointmentDate": "2026-04-30",
+      "startTime": "09:45",
+      "endTime": "10:30",
+      "reason": "EXAM_QUERY",
+      "notes": "Wants feedback on analytics case reflection draft.",
+      "status": "PENDING"
+    },
+    {
+      "student": "meera.r@student.hitech.lk",
+      "instructor": "nimali.perera@hitech.lk",
+      "appointmentDate": "2026-05-01",
+      "startTime": "15:00",
+      "endTime": "15:30",
+      "reason": "GENERAL_INQUIRY",
+      "notes": "Originally booked before instructor leave was added.",
+      "cancellationReason": "Instructor unavailable on Labour Day.",
+      "status": "CANCELLED"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "recurrenceGroups": [
+    {
+      "frequency": "WEEKLY",
+      "daysOfWeek": "MON,WED",
+      "repeatUntil": "2026-06-30"
+    }
+  ],
+  "sessions": [
+    {
+      "courseCode": "SE-JAVA-101",
+      "instructor": "nimali.perera@hitech.lk",
+      "recurrenceGroupIndex": 1,
+      "title": "Java Lab: Methods and Debugging",
+      "sessionDate": "2026-04-27",
+      "startTime": "18:00",
+      "endTime": "20:00",
+      "classType": "ONLINE",
+      "meetingPlatform": "ZOOM",
+      "meetingLink": "https://meet.hitech.local/java-foundations/lab",
+      "notes": "Bring your Week 2 exercises.",
+      "status": "SCHEDULED",
+      "createdBy": "admin@hitech.com"
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "instructor": "nimali.perera@hitech.lk",
+      "recurrenceGroupIndex": 1,
+      "title": "Java Lab: Arrays and Lists",
+      "sessionDate": "2026-04-29",
+      "startTime": "18:00",
+      "endTime": "20:00",
+      "classType": "ONLINE",
+      "meetingPlatform": "ZOOM",
+      "meetingLink": "https://meet.hitech.local/java-foundations/lab",
+      "notes": "Practice worksheet will be uploaded before class.",
+      "status": "SCHEDULED",
+      "createdBy": "admin@hitech.com"
+    },
+    {
+      "courseCode": "DA-BIZ-201",
+      "instructor": "dinesh.fernando@hitech.lk",
+      "title": "Analytics Workshop: KPI Storytelling",
+      "sessionDate": "2026-04-28",
+      "startTime": "09:30",
+      "endTime": "11:00",
+      "classType": "PHYSICAL",
+      "classLocation": "Room 204, Main Building",
+      "notes": "Use the retail workbook from the content area.",
+      "status": "SCHEDULED",
+      "createdBy": "admin@hitech.com"
+    },
+    {
+      "courseCode": "BM-COMM-110",
+      "instructor": "dinesh.fernando@hitech.lk",
+      "title": "Archived Cohort Wrap-up",
+      "sessionDate": "2026-03-28",
+      "startTime": "10:00",
+      "endTime": "12:00",
+      "classType": "PHYSICAL",
+      "classLocation": "Auditorium A",
+      "notes": "Final feedback session.",
+      "status": "COMPLETED",
+      "createdBy": "admin@hitech.com"
+    }
+  ]
+}

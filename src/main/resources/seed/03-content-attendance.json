@@ -1,0 +1,109 @@
+{
+  "contentNodes": [
+    {
+      "courseCode": "SE-JAVA-101",
+      "nodeType": "WEEK",
+      "title": "Week 1: Java Setup and First Programs",
+      "sortOrder": 1
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "nodeType": "MODULE",
+      "title": "Module 1.1: Tooling and Syntax",
+      "parentTitle": "Week 1: Java Setup and First Programs",
+      "sortOrder": 1
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "nodeType": "TOPIC",
+      "title": "Topic 1.1.1: Variables and Types",
+      "parentTitle": "Module 1.1: Tooling and Syntax",
+      "sortOrder": 1
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "nodeType": "WEEK",
+      "title": "Week 2: Control Flow and Methods",
+      "sortOrder": 2
+    },
+    {
+      "courseCode": "DA-BIZ-201",
+      "nodeType": "WEEK",
+      "title": "Week 1: Data Literacy for Business",
+      "sortOrder": 1
+    },
+    {
+      "courseCode": "DA-BIZ-201",
+      "nodeType": "MODULE",
+      "title": "Module 1.1: KPI Vocabulary",
+      "parentTitle": "Week 1: Data Literacy for Business",
+      "sortOrder": 1
+    }
+  ],
+  "materials": [
+    {
+      "courseCode": "SE-JAVA-101",
+      "nodeTitle": "Topic 1.1.1: Variables and Types",
+      "title": "Java Setup Checklist",
+      "description": "Installation checklist for JDK, IDE, and Git.",
+      "materialType": "PDF",
+      "fileUrl": "https://cdn.hitech.local/materials/java-setup-checklist.pdf",
+      "fileSizeBytes": 524288,
+      "version": 1,
+      "sortOrder": 1,
+      "uploadedBy": "nimali.perera@hitech.lk"
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "nodeTitle": "Week 2: Control Flow and Methods",
+      "title": "Control Flow Walkthrough",
+      "description": "Recorded lesson covering if, switch, loops, and methods.",
+      "materialType": "VIDEO_LINK",
+      "fileUrl": "https://video.hitech.local/java/control-flow",
+      "version": 2,
+      "sortOrder": 1,
+      "uploadedBy": "nimali.perera@hitech.lk"
+    },
+    {
+      "courseCode": "DA-BIZ-201",
+      "nodeTitle": "Module 1.1: KPI Vocabulary",
+      "title": "Retail KPI Glossary",
+      "description": "Common terms used in revenue, retention, and margin reporting.",
+      "materialType": "EXTERNAL_URL",
+      "fileUrl": "https://kb.hitech.local/analytics/kpi-glossary",
+      "version": 1,
+      "sortOrder": 1,
+      "uploadedBy": "dinesh.fernando@hitech.lk"
+    }
+  ],
+  "attendance": [
+    {
+      "courseCode": "SE-JAVA-101",
+      "student": "kasun.jayasinghe@student.hitech.lk",
+      "date": "2026-04-20",
+      "status": "PRESENT",
+      "recordedBy": "nimali.perera@hitech.lk"
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "student": "ayesha.silva@student.hitech.lk",
+      "date": "2026-04-20",
+      "status": "LATE",
+      "recordedBy": "nimali.perera@hitech.lk"
+    },
+    {
+      "courseCode": "SE-JAVA-101",
+      "student": "kasun.jayasinghe@student.hitech.lk",
+      "date": "2026-04-22",
+      "status": "EXCUSED",
+      "recordedBy": "nimali.perera@hitech.lk"
+    },
+    {
+      "courseCode": "DA-BIZ-201",
+      "student": "ayesha.silva@student.hitech.lk",
+      "date": "2026-04-21",
+      "status": "PRESENT",
+      "recordedBy": "dinesh.fernando@hitech.lk"
+    }
+  ]
+}

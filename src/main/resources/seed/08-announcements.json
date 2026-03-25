@@ -1,0 +1,35 @@
+{
+  "announcements": [
+    {
+      "title": "Sinhala and Tamil New Year Catch-up Week",
+      "message": "All active courses will include optional catch-up activities during the last week of April.",
+      "type": "SYSTEM",
+      "author": "admin@hitech.com",
+      "isActive": true
+    },
+    {
+      "title": "Java Lab moved online this week",
+      "message": "The Java Foundations lab on 27 April will run through the Zoom classroom link in Schedule.",
+      "type": "COURSE",
+      "courseCode": "SE-JAVA-101",
+      "author": "nimali.perera@hitech.lk",
+      "isActive": true
+    },
+    {
+      "title": "Analytics workbook update",
+      "message": "A corrected version of the retail KPI workbook has been uploaded under Week 1 materials.",
+      "type": "COURSE",
+      "courseCode": "DA-BIZ-201",
+      "author": "dinesh.fernando@hitech.lk",
+      "isActive": true
+    },
+    {
+      "title": "Old communication cohort notice",
+      "message": "This archived announcement remains in the database to test inactive announcement handling.",
+      "type": "COURSE",
+      "courseCode": "BM-COMM-110",
+      "author": "admin@hitech.com",
+      "isActive": false
+    }
+  ]
+}
