@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Courses — Hi-Tech Institute LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        .my-course-card {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 16px;
+            align-items: center;
+            padding: 18px;
+            border: 1px solid var(--border-light);
+            border-radius: 14px;
+            background: var(--card-bg);
+            transition: box-shadow 150ms ease, transform 150ms ease;
+        }
+        .my-course-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,.06);
+            transform: translateY(-1px);
+        }
+        .course-icon-box {
+            width: 80px; height: 80px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 36px;
+            flex-shrink: 0;
+            color: #fff;
+        }
+        @media (max-width: 600px) {
+            .my-course-card { grid-template-columns: 1fr; }
+            .my-course-card .card-actions { grid-column: 1/-1; }
+        }
+        
+        
+    </style>
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<main class="container page-content">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>My Courses</h1>
+            <p>All your enrolled courses</p>
+        </div>
+        <a href="course-catalog.html" class="btn btn-primary">🔍 Browse More Courses</a>
+    </div>
+
+    <!-- Filter tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border-subtle);padding-bottom:0;">
+        <button class="tab-btn active" id="tab-all" onclick="setTab('all')">All</button>
+        <button class="tab-btn" id="tab-active" onclick="setTab('active')">Active</button>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div id="loading-state">
+        ${Array(3).fill(`<div style="height:100px;background:var(--gray-100);border-radius:12px;margin-bottom:12px;animation:shimmer 1.5s infinite;background-size:200% 100%;background-image:linear-gradient(90deg,var(--gray-100) 25%,var(--gray-200) 50%,var(--gray-100) 75%);"></div>`).join('')}
+    </div>
+
+    <!-- Courses list -->
+    <div id="courses-list" class="hidden" style="display:flex;flex-direction:column;gap:14px;"></div>
+
+    <!-- Empty state -->
+    <div class="hidden empty-state" id="empty-state">
+        <div class="empty-state-icon">📚</div>
+        <h3 class="empty-state-title" style="font-size:20px;">No Enrolled Courses</h3>
+        <p class="empty-state-sub mt-2">You haven't enrolled in any courses yet.</p>
+        <a href="course-catalog.html" class="btn btn-primary mt-4">Browse Courses</a>
+    </div>
+
+</main>
+
+<footer class="site-footer" style="margin-top:40px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    if (getUserRole() !== 'STUDENT') { window.location.href = 'dashboard.html'; }
+    buildNavbar('courses');
+
+    let allCourses = [];
+    let activeTab = 'all';
+
+    (async function loadCourses() {
+        try {
+            const res = await apiCall('/courses/my');
+            allCourses = res.data || [];
+            hide(document.getElementById('loading-state'));
+
+            if (!allCourses.length) {
+                show(document.getElementById('empty-state'));
+                return;
+            }
+
+            show(document.getElementById('courses-list'));
+            renderCourses(allCourses);
+        } catch (err) {
+            hide(document.getElementById('loading-state'));
+            showToast('Failed to load courses: ' + err.message, 'error');
+        }
+    })();
+
+    function setTab(tab) {
+        activeTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            if (btn.id === `tab-${tab}`) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        const filtered = tab === 'active'
+            ? allCourses.filter(c => c.status === 'ACTIVE')
+            : allCourses;
+        renderCourses(filtered);
+    }
+
+    function renderCourses(courses) {
+        const container = document.getElementById('courses-list');
+        if (!courses.length) {
+            container.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text-muted);background:var(--card-bg);border-radius:14px;border:1px solid var(--border-light);">
+                No courses match this filter.</div>`;
+            return;
+        }
+
+        container.innerHTML = courses.map(c => {
+            return `
+            <div class="my-course-card">
+                <div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                        <a href="course-detail.html?id=${c.id}" style="font-weight:700;font-size:16px;color:var(--text-primary);text-decoration:none;">${c.title}</a>
+                        ${getCourseStatusBadge(c.status)}
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;display:flex;gap:12px;align-items:center;">
+                        <span style="font-weight:600;color:var(--brand-primary);">${c.programName}</span>
+                        <span style="font-family:monospace;background:var(--page-bg);padding:2px 6px;border-radius:4px;">${c.courseCode}</span>
+                        ${c.durationValue ? `<span>📅 ${c.durationValue} ${c.durationUnit?.toLowerCase() || ''}</span>` : ''}
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);">
+                        ${c.primaryInstructorName ? `👨‍🏫 ${c.primaryInstructorName}` : ''}
+                        ${c.enrolledCount ? `&nbsp;·&nbsp; 👥 ${c.enrolledCount} students` : ''}
+                    </div>
+                </div>
+                <div class="card-actions" style="display:flex;flex-direction:column;gap:6px;min-width:120px;justify-content:center;">
+                    <a href="course-detail.html?id=${c.id}" class="btn btn-primary btn-sm btn-full">Open Course</a>
+                </div>
+            </div>`;
+        }).join('');
+    }
+</script>
+</body>
+</html>
