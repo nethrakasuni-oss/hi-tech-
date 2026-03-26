@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Management — Hi-Tech Institute LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        .node-row {
+            display:flex; align-items:center; gap:8px; padding:10px 14px;
+            border-radius:10px; cursor:pointer; font-weight:500;
+            border:1px solid transparent; transition:background 150ms ease, border-color 150ms ease;
+        }
+        .node-row:hover { background:var(--page-bg); border-color:var(--border-light); }
+        .node-row.selected { background:var(--brand-light); border-color:var(--brand-primary); color:var(--brand-primary); }
+        .node-row .node-title { flex:1; font-size:14px; }
+        .node-row .node-type-badge {
+            font-size:10px; font-weight:700; padding:2px 8px; letter-spacing:0.05em;
+            border-radius:99px; background:var(--border-light); color:var(--text-muted); text-transform:uppercase;
+        }
+        .node-row.selected .node-type-badge { background:white; color:var(--brand-primary); }
+        .material-card {
+            display:flex; align-items:center; gap:16px; padding:16px;
+            border:1px solid var(--border-light); border-radius:12px;
+            margin-bottom:12px; background:var(--card-bg); transition:box-shadow 150ms ease;
+        }
+        .material-card:hover { box-shadow:0 2px 8px rgba(0,0,0,.04); }
+        .material-icon { font-size:28px; flex-shrink:0; background:var(--page-bg); width:48px; height:48px; display:flex; align-items:center; justify-content:center; border-radius:10px; }
+        .indent-1 { margin-left:16px; }
+        .indent-2 { margin-left:32px; }
+    </style>
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<!-- Add Material Modal -->
+<div class="modal-overlay" id="material-modal">
+    <div class="modal">
+        <h3 class="modal-title">Add Material</h3>
+        <div class="form-group">
+            <label class="form-label">Title *</label>
+            <input type="text" id="mat-title" class="form-control" placeholder="e.g. Week 1 Lecture Slides">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Type *</label>
+            <select id="mat-type" class="form-control" onchange="toggleUrlField()">
+                <option value="PDF">PDF Document</option>
+                <option value="PPTX">PowerPoint Slides</option>
+                <option value="VIDEO_LINK">Video Link (YouTube, Vimeo)</option>
+                <option value="EXTERNAL_URL">External Resource URL</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" id="url-label">File URL *</label>
+            <input type="url" id="mat-url" class="form-control" placeholder="https://...">
+            <div class="form-hint" id="url-hint">For demo: paste any HTTPS URL. In production this is the S3 upload URL.</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeMaterialModal()">Cancel</button>
+            <button class="btn btn-primary" id="add-material-btn" onclick="submitMaterial()">Add Material</button>
+        </div>
+    </div>
+</div>
+
+<main class="container page-content">
+    <div class="breadcrumb" style="margin-bottom:20px;">
+        <a href="dashboard.html">Dashboard</a> <span class="breadcrumb-sep">/</span>
+        <a href="manage-courses.html">Courses</a> <span class="breadcrumb-sep">/</span>
+        <a id="course-link" href="#">Course</a> <span class="breadcrumb-sep">/</span>
+        <span>Content</span>
+    </div>
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1 id="course-title">Content Management</h1>
+            <p>Build the Week → Module → Topic hierarchy and upload materials</p>
+        </div>
+        <a id="view-course-btn" href="#" class="btn btn-outline">👁 View Course</a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:340px 1fr;gap:24px;">
+
+        <!-- LEFT: Content Tree -->
+        <div class="content-card" style="height:fit-content; padding:0;">
+            <div class="content-card-hdr" style="padding:16px 20px;">
+                <span class="content-card-title">Content Tree</span>
+            </div>
+            <div id="tree-container" style="min-height:200px; padding:16px 20px;">
+                <p class="text-muted" style="padding:8px 0;font-size:14px;">Loading...</p>
+            </div>
+            <div style="border-top:1px solid var(--border-subtle);padding:16px 20px;background:var(--page-bg);border-radius:0 0 16px 16px;">
+                <p style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:12px;letter-spacing:0.05em;">ADD NEW NODE</p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-sm btn-outline" onclick="promptAddNode('WEEK', null)">+ Week</button>
+                    <button class="btn btn-sm btn-secondary" onclick="promptAddModuleOrTopic('MODULE')"
+                            id="add-module-btn" disabled>+ Module</button>
+                    <button class="btn btn-sm btn-secondary" onclick="promptAddModuleOrTopic('TOPIC')"
+                            id="add-topic-btn" disabled>+ Topic</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Materials Panel -->
+        <div class="content-card" style="padding:0;">
+            <div class="content-card-hdr" style="padding:16px 20px;">
+                <span class="content-card-title" id="right-panel-title">Select a node to manage materials</span>
+                <button class="btn btn-sm btn-primary hidden" id="add-material-open-btn"
+                        onclick="openMaterialModal()">+ Add Material</button>
+            </div>
+            <div id="materials-container" style="padding:20px;">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📁</div>
+                    <p class="empty-state-title" style="font-size:18px;">Select a Node</p>
+                    <p class="empty-state-sub">Select a node in the tree to view and add materials</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="site-footer" style="margin-top:40px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    const userRole = getUserRole();
+    if (userRole === 'STUDENT') { window.location.href = 'dashboard.html'; }
+    buildNavbar('courses');
+
+    const params   = new URLSearchParams(window.location.search);
+    const courseId = params.get('id');
+    if (!courseId) { window.location.href = 'manage-courses.html'; }
+
+    let selectedNodeId = null;
+    let selectedNodeType = null;
+
+    // Set up links
+    document.getElementById('course-link').href = `course-detail.html?id=${courseId}`;
+    document.getElementById('view-course-btn').href = `course-detail.html?id=${courseId}`;
+
+    // Load course title
+    (async () => {
+        try {
+            const res = await apiCall(`/courses/${courseId}`);
+            document.getElementById('course-title').textContent = res.data.title + ' — Content';
+            document.getElementById('course-link').textContent = res.data.title;
+        } catch(e) {}
+    })();
+
+    // Load content tree
+    async function loadTree() {
+        try {
+            const res = await apiCall(`/courses/${courseId}/content`);
+            const weeks = res.data || [];
+            const container = document.getElementById('tree-container');
+            if (!weeks.length) {
+                container.innerHTML = '<p class="text-muted" style="font-size:14px;padding:8px 0;">No content yet. Add a Week to get started.</p>';
+                return;
+            }
+            let html = '';
+            weeks.forEach(week => {
+                html += renderTreeNode(week, '');
+                (week.children || []).forEach(mod => {
+                    html += renderTreeNode(mod, 'indent-1');
+                    (mod.children || []).forEach(topic => {
+                        html += renderTreeNode(topic, 'indent-2');
+                    });
+                });
+            });
+            container.innerHTML = html;
+        } catch(err) {
+            document.getElementById('tree-container').innerHTML = '<p class="text-muted">Failed to load tree.</p>';
+        }
+    }
+
+    function renderTreeNode(node, indentClass) {
+        const icons = { WEEK: '📅', MODULE: '📂', TOPIC: '🔷' };
+        const isSelected = node.id === selectedNodeId;
+        return `<div class="node-row ${indentClass} ${isSelected ? 'selected' : ''}"
+                     onclick="selectNode(${node.id}, '${node.nodeType}', '${node.title}')">
+            <span style="font-size:16px;">${icons[node.nodeType] || '•'}</span>
+            <span class="node-title">${node.title}</span>
+            <span class="node-type-badge">${node.nodeType}</span>
+            <button onclick="event.stopPropagation();deleteNode(${node.id}, '${node.title}')"
+                    style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:15px;padding:4px;border-radius:4px;"
+                    title="Delete" onmouseover="this.style.background='var(--danger-light)';this.style.color='var(--danger)';" onmouseout="this.style.background='none';this.style.color='var(--text-muted)';">🗑</button>
+        </div>`;
+    }
+
+    function selectNode(id, type, title) {
+        selectedNodeId   = id;
+        selectedNodeType = type;
+        document.getElementById('right-panel-title').textContent = title;
+        show(document.getElementById('add-material-open-btn'));
+        document.getElementById('add-module-btn').disabled = (type !== 'WEEK');
+        document.getElementById('add-topic-btn').disabled  = (type !== 'MODULE');
+        loadMaterials(id);
+        loadTree(); // Refresh tree to update selected state
+    }
+
+    async function loadMaterials(nodeId) {
+        const container = document.getElementById('materials-container');
+        container.innerHTML = '<p class="text-muted" style="padding:8px 0;">Loading...</p>';
+        try {
+            // Use the materials from the content tree
+            const treeRes = await apiCall(`/courses/${courseId}/content`);
+            const allNodes = flattenTree(treeRes.data);
+            const node = allNodes.find(n => n.id === nodeId);
+            const materials = node?.materials || [];
+
+            if (!materials.length) {
+                container.innerHTML = `<div class="empty-state">
+                    <div class="empty-state-icon" style="font-size:40px;">📎</div>
+                    <p class="empty-state-title" style="font-size:16px;">No Materials</p>
+                    <p class="empty-state-sub">Click "+ Add Material" to upload resources.</p></div>`;
+                return;
+            }
+            container.innerHTML = materials.map(m => `
+                <div class="material-card">
+                    <span class="material-icon">${getMaterialIcon(m.materialType)}</span>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:15px;color:var(--text-primary);margin-bottom:4px;">${m.title}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">
+                            <span style="background:var(--page-bg);padding:2px 6px;border-radius:4px;font-weight:600;">${m.materialType.replace('_', ' ')}</span>
+                            ${m.formattedFileSize ? `&nbsp;·&nbsp; ${m.formattedFileSize}` : ''}
+                            &nbsp;·&nbsp; v${m.version} &nbsp;·&nbsp; ${m.uploadedByName}
+                        </div>
+                    </div>
+                    <a href="${m.fileUrl}" target="_blank" class="btn btn-sm btn-outline">Open</a>
+                    <button onclick="deleteMaterial(${m.id}, '${m.title}')" class="btn btn-sm btn-danger">🗑</button>
+                </div>`).join('');
+        } catch(err) {
+            container.innerHTML = '<p class="text-muted">Could not load materials.</p>';
+        }
+    }
+
+    function flattenTree(weeks) {
+        const nodes = [];
+        weeks.forEach(w => {
+            nodes.push(w);
+            (w.children || []).forEach(m => {
+                nodes.push(m);
+                (m.children || []).forEach(t => nodes.push(t));
+            });
+        });
+        return nodes;
+    }
+
+    async function promptAddNode(type, parentId) {
+        const title = prompt(`Enter ${type} title:`);
+        if (!title?.trim()) return;
+        try {
+            await apiCall(`/courses/${courseId}/content-nodes`, {
+                method: 'POST',
+                body: { nodeType: type, title: title.trim(), parentId, sortOrder: 99 }
+            });
+            showToast(`${type} added!`, 'success');
+            loadTree();
+        } catch(err) { showToast(err.message, 'error'); }
+    }
+
+    async function promptAddModuleOrTopic(type) {
+        if (!selectedNodeId) { showToast('Please select a parent node first.', 'error'); return; }
+        promptAddNode(type, selectedNodeId);
+    }
+
+    async function deleteNode(id, title) {
+        if (!confirm(`Delete "${title}"? All its children and materials will also be deleted.`)) return;
+        try {
+            await apiCall(`/courses/${courseId}/content-nodes/${id}`, { method: 'DELETE' });
+            if (selectedNodeId === id) { selectedNodeId = null; }
+            showToast('Node deleted.', 'info');
+            loadTree();
+            document.getElementById('materials-container').innerHTML =
+                '<div class="empty-state"><div class="empty-state-icon">📁</div><p class="empty-state-title" style="font-size:18px;">Select a Node</p><p class="empty-state-sub">Select a node in the tree to view and add materials</p></div>';
+        } catch(err) { showToast(err.message, 'error'); }
+    }
+
+    async function deleteMaterial(id, title) {
+        if (!confirm(`Delete material "${title}"?`)) return;
+        try {
+            await apiCall(`/courses/${courseId}/materials/${id}`, { method: 'DELETE' });
+            showToast('Material deleted.', 'info');
+            loadMaterials(selectedNodeId);
+        } catch(err) { showToast(err.message, 'error'); }
+    }
+
+    // Material Modal
+    function openMaterialModal() {
+        document.getElementById('mat-title').value = '';
+        document.getElementById('mat-url').value   = '';
+        toggleUrlField();
+        document.getElementById('material-modal').classList.add('open');
+    }
+
+    function closeMaterialModal() {
+        document.getElementById('material-modal').classList.remove('open');
+    }
+
+    function toggleUrlField() {
+        const type = document.getElementById('mat-type').value;
+        const isLink = type === 'VIDEO_LINK' || type === 'EXTERNAL_URL';
+        document.getElementById('url-label').textContent = isLink ? 'URL *' : 'File URL *';
+        document.getElementById('url-hint').textContent = isLink
+            ? 'Must start with https://'
+            : 'For demo: paste any HTTPS URL. In production this will be the S3 upload URL.';
+        document.getElementById('mat-url').placeholder = isLink
+            ? 'https://youtube.com/watch?v=...'
+            : 'https://storage.example.com/file.pdf';
+    }
+
+    async function submitMaterial() {
+        const title = document.getElementById('mat-title').value.trim();
+        const type  = document.getElementById('mat-type').value;
+        const url   = document.getElementById('mat-url').value.trim();
+
+        if (!title) { showToast('Title is required', 'error'); return; }
+        if (!url)   { showToast('URL is required', 'error'); return; }
+        if (!url.startsWith('https://')) { showToast('URL must start with https://', 'error'); return; }
+
+        const btn = document.getElementById('add-material-btn');
+        setLoading(btn, true, 'Adding...');
+        try {
+            await apiCall(`/courses/${courseId}/materials`, {
+                method: 'POST',
+                body: { title, materialType: type, fileUrl: url, nodeId: selectedNodeId }
+            });
+            showToast('Material added!', 'success');
+            closeMaterialModal();
+            loadMaterials(selectedNodeId);
+            setLoading(btn, false);
+        } catch(err) {
+            setLoading(btn, false);
+            showToast(err.message, 'error');
+        }
+    }
+
+    document.getElementById('material-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeMaterialModal();
+    });
+
+    loadTree();
+</script>
+</body>
+</html>
