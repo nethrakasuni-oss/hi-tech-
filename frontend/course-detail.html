@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Detail — Hi-Tech Institute LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<div class="modal-overlay" id="performance-modal">
+    <div class="modal" style="max-width: 860px;">
+        <h3 class="modal-title" id="performance-title">Student Performance</h3>
+        <p class="modal-body" id="performance-summary">Generating predictions...</p>
+        <div class="table-wrapper" style="max-height: 420px; overflow:auto;">
+            <table class="content-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Prediction</th>
+                        <th>Confidence</th>
+                        <th>Attendance</th>
+                        <th>Exam Avg.</th>
+                        <th>Open Signals</th>
+                    </tr>
+                </thead>
+                <tbody id="performance-table-body"></tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closePerformanceModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<main class="container page-content">
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb" id="breadcrumb" style="margin-bottom:24px;">
+        <a href="dashboard.html">Dashboard</a> <span class="breadcrumb-sep">/</span> <span id="breadcrumb-label">Course</span>
+    </div>
+
+    <!-- Loading state -->
+    <div id="loading-state">
+        <div class="skeleton" style="width:300px;height:32px;margin-bottom:12px;"></div>
+        <div class="skeleton" style="width:200px;height:20px;margin-bottom:24px;"></div>
+        <div class="skeleton" style="width:100%;height:160px;border-radius:16px;"></div>
+    </div>
+
+    <!-- Course Header -->
+    <div id="course-header" class="hidden">
+        <div class="content-card mb-4" style="margin-bottom:24px; padding:24px;">
+            <div style="display:grid;grid-template-columns:1fr auto;gap:24px;align-items:start;" class="two-col">
+                <div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <span id="course-status-badge"></span>
+                        <span id="course-program" style="font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--brand-primary);"></span>
+                        <span id="course-code" style="font-size:12px;color:var(--text-muted);font-family:monospace;background:var(--page-bg);padding:2px 6px;border-radius:4px;"></span>
+                    </div>
+                    <h1 id="course-title" style="margin-bottom:12px; font-size:28px;"></h1>
+                    <p id="course-description" style="margin-bottom:20px; color:var(--text-body); font-size:15px; line-height:1.6;"></p>
+
+                    <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13px;font-weight:500;color:var(--text-muted);">
+                        <span id="course-duration">📅 —</span>
+                        <span id="course-fee">💰 —</span>
+                        <span id="course-students">👥 — students</span>
+                        <span id="course-instructor">👨‍🏫 —</span>
+                    </div>
+                </div>
+
+                <!-- Action buttons -->
+                <div style="display:flex;flex-direction:column;gap:10px;min-width:180px;" id="action-buttons">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 2-Column Grid Layout for Content and Sidebar -->
+        <div style="display:grid; grid-template-columns:1fr 340px; gap:24px; align-items:start;">
+            
+            <!-- MAIN CONTENT COLUMN -->
+            <div class="main-column">
+                <!-- About section -->
+                <div id="about-section" class="content-card mb-4" style="margin-bottom:24px; padding:0;">
+                    <div class="content-card-hdr" style="padding: 20px 24px;">
+                        <span class="content-card-title">About This Course</span>
+                    </div>
+                    <div style="padding: 24px;">
+                        <div id="course-full-description" style="color:var(--text-body);line-height:1.7; font-size:15px;"></div>
+                        <div id="instructor-cards" style="margin-top:24px;display:flex;gap:16px;flex-wrap:wrap;"></div>
+                    </div>
+                </div>
+
+                <!-- Content Outline (only for enrolled students and instructors) -->
+                <div id="content-outline-section" class="content-card hidden" style="padding:0; margin-bottom:24px;">
+                    <div class="content-card-hdr" style="padding: 10px 24px;">
+                        <span class="content-card-title">📁 Course Content</span>
+                        <span id="content-manage-link"></span>
+                    </div>
+                    <div id="content-tree-container" style="padding: 0 24px 24px;">
+                        <p class="text-muted">Loading content...</p>
+                    </div>
+                </div>
+
+                <!-- Not enrolled state (for students) -->
+                <div id="not-enrolled-section" class="content-card hidden" style="text-align:center;padding:48px 24px; margin-bottom:24px;">
+                    <div class="empty-state-icon">🔒</div>
+                    <h3 style="font-size:20px; color:var(--text-primary);">Course Content Locked</h3>
+                    <p class="text-muted mt-2">Enroll in this course to access all materials and content.</p>
+                </div>
+            </div>
+
+            <!-- RIGHT SIDEBAR COLUMN -->
+            <div class="sidebar-column">
+                <!-- Progress Tracker Section -->
+                <div id="progress-section" class="content-card mb-4" style="margin-bottom:24px; padding:0;">
+                    <div class="content-card-hdr" style="padding: 20px 24px; display:flex; justify-content:space-between; align-items:center;">
+                        <span class="content-card-title" style="font-size:14px;">📈 Current Progress</span>
+                        <button id="btn-edit-progress" class="btn btn-sm btn-outline hidden" onclick="toggleProgressEdit(true)">✏️ Edit</button>
+                    </div>
+                    <div style="padding: 24px;">
+                        <div id="progress-view-mode">
+                            <p id="current-progress-text" style="color:var(--text-body); font-size:15px; margin:0; font-weight:500;">Loading progress...</p>
+                        </div>
+                        <div id="progress-edit-mode" class="hidden">
+                            <div class="form-group mb-0">
+                                <input type="text" id="progress-input" class="form-control" placeholder="e.g. Week 4 - Day 2: Advanced Topics" maxlength="100">
+                            </div>
+                            <div style="margin-top:12px; display:flex; gap:8px;">
+                                <button class="btn btn-sm btn-primary" onclick="saveProgress()">Save</button>
+                                <button class="btn btn-sm btn-secondary" onclick="toggleProgressEdit(false)">Cancel</button>
+                            </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Course Announcements ── -->
+            <div id="course-announcements-section" class="content-card" style="padding:0; margin-bottom:24px;">
+                <div class="content-card-hdr" style="padding:14px 24px; display:flex; justify-content:space-between; align-items:center;">
+                    <span class="content-card-title" style="font-size:14px;">📢 Announcements</span>
+                    <button id="btn-post-ann" class="btn btn-sm btn-primary hidden"
+                            onclick="toggleCourseAnnForm()">
+                        <span id="course-ann-btn-icon">+</span> Post
+                    </button>
+                </div>
+                <!-- Inline post form (collapsed by default) -->
+                <div id="course-ann-form" class="hidden" style="padding:0 20px 16px;border-bottom:1px solid var(--border-light);">
+                    <div class="form-group mb-2">
+                        <label class="form-label" style="font-size:12px;">Title <span style="color:#ef4444;">*</span></label>
+                        <input type="text" id="course-ann-title" class="form-control" placeholder="Short headline..." maxlength="200">
+                    </div>
+                    <div class="form-group mb-2">
+                        <label class="form-label" style="font-size:12px;">Message <span style="color:#ef4444;">*</span></label>
+                        <textarea id="course-ann-message" class="form-control" rows="3"
+                                  placeholder="Write your announcement..."></textarea>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-sm btn-primary" onclick="submitCourseAnn()" id="course-ann-submit-btn">Post</button>
+                        <button class="btn btn-sm btn-secondary" onclick="toggleCourseAnnForm()">Cancel</button>
+                    </div>
+                </div>
+                <div id="course-ann-list" style="padding:16px 20px;">
+                    <p style="color:#9ca3af;font-size:13px;">Loading announcements...</p>
+                </div>
+            </div>
+
+            <!-- ── Attendance Management (Instructor only) ── -->
+            <div id="attendance-section" class="content-card hidden" style="padding:0; margin-bottom:24px;">
+                <div class="content-card-hdr" style="padding:14px 24px; display:flex; justify-content:space-between; align-items:center;">
+                    <span class="content-card-title" style="font-size:14px;">📋 Attendance</span>
+                    <button id="btn-toggle-att-import" class="btn btn-sm btn-primary" onclick="toggleAttImportForm()">
+                        <span id="att-import-btn-icon">+</span> Import
+                    </button>
+                </div>
+
+                <!-- Import form (collapsed by default) -->
+                <div id="att-import-form" class="hidden" style="padding:0 20px 16px; border-bottom:1px solid var(--border-light);">
+                    <div class="form-group mb-2">
+                        <label class="form-label" style="font-size:12px;">Date <span style="color:#ef4444;">*</span></label>
+                        <input type="date" id="att-import-date" class="form-control" max="">
+                    </div>
+                    <div class="form-group mb-2">
+                        <label class="form-label" style="font-size:12px;">CSV File <span style="color:#ef4444;">*</span></label>
+                        <input type="file" id="att-import-file" class="form-control" accept=".csv" style="padding:8px;">
+                        <div style="margin-top:6px;">
+                            <a href="#" onclick="downloadAttTemplate(event)" style="font-size:12px; color:var(--brand-primary); text-decoration:none; font-weight:500;">⬇ Download CSV Template</a>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-sm btn-primary" onclick="submitAttImport()" id="att-import-submit-btn">Upload</button>
+                        <button class="btn btn-sm btn-secondary" onclick="toggleAttImportForm()">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Import result banner -->
+                <div id="att-import-result" class="hidden" style="padding:12px 20px; font-size:13px; border-bottom:1px solid var(--border-light);">
+                </div>
+
+                <!-- History: date selector + table -->
+                <div style="padding:16px 20px;">
+                    <div class="form-group mb-2">
+                        <label class="form-label" style="font-size:12px;">View by Date</label>
+                        <select id="att-date-select" class="form-control" onchange="loadAttendanceForDate()" style="font-size:13px;">
+                            <option value="">— Select a date —</option>
+                        </select>
+                    </div>
+                    <div id="att-records-container">
+                        <p style="color:#9ca3af; font-size:13px;">Select a date to view attendance records.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    buildNavbar('courses');
+
+    const params   = new URLSearchParams(window.location.search);
+    const courseId = params.get('id');
+    const userRole = getUserRole();
+    const userId   = getCurrentUser()?.id;
+
+    if (!courseId) { window.location.href = 'manage-courses.html'; }
+
+    // Override styling for tree nodes in course detail
+    const cssStyle = document.createElement('style');
+    cssStyle.innerHTML = `
+        .content-tree-week { font-weight:700; color:var(--text-primary); padding:14px 0; border-bottom:1px solid var(--border-light); font-size:15px; }
+        #content-tree-container > div:first-child .content-tree-week { padding-top: 0; }
+        .content-tree-module { padding:10px 0 10px 20px; font-weight:600; color:var(--text-body); border-left:2px solid var(--border-light); margin-left:8px; }
+        .content-tree-topic { padding:6px 0 6px 40px; color:var(--text-muted); font-size:14px; border-left:2px solid var(--border-light); margin-left:8px; }
+        .content-tree-material { padding:6px 0 6px 56px; font-size:13px; color:var(--text-muted); display:flex; align-items:center; gap:8px; border-left:2px solid var(--border-light); margin-left:8px; }
+        .content-tree-material a { color:var(--brand-primary); text-decoration:none; font-weight:500; }
+        .content-tree-material a:hover { text-decoration:underline; }
+    `;
+    document.head.appendChild(cssStyle);
+
+    (async function loadCourse() {
+        try {
+            const res = await apiCall(`/courses/${courseId}`);
+            const c = res.data;
+            hide(document.getElementById('loading-state'));
+            show(document.getElementById('course-header'));
+
+            // Breadcrumb
+            document.getElementById('breadcrumb-label').textContent = c.title;
+            if (userRole === 'STUDENT') {
+                document.getElementById('breadcrumb').innerHTML =
+                    `<a href="dashboard.html">Dashboard</a> <span class="breadcrumb-sep">/</span> <a href="course-catalog.html">Catalog</a> <span class="breadcrumb-sep">/</span> <span>${c.title}</span>`;
+            } else {
+                document.getElementById('breadcrumb').innerHTML =
+                    `<a href="dashboard.html">Dashboard</a> <span class="breadcrumb-sep">/</span> <a href="manage-courses.html">Courses</a> <span class="breadcrumb-sep">/</span> <span>${c.title}</span>`;
+            }
+
+            // Header info
+            document.getElementById('course-status-badge').innerHTML = getCourseStatusBadge(c.status);
+            document.getElementById('course-program').textContent = c.programName;
+            document.getElementById('course-code').textContent = c.courseCode;
+            document.getElementById('course-title').textContent = c.title;
+            document.getElementById('course-description').textContent = c.description || 'No description provided.';
+            document.getElementById('course-duration').textContent =
+                c.durationValue ? `📅 ${c.durationValue} ${c.durationUnit?.toLowerCase() || ''}` : '📅 Duration not set';
+            document.getElementById('course-fee').textContent = parseFloat(c.courseFee) === 0 ? '💰 Free' : `💰 ${formatCurrency(c.courseFee)}`;
+            document.getElementById('course-students').textContent = `👥 ${c.enrolledCount} students`;
+            document.getElementById('course-instructor').textContent =
+                c.instructors.length ? `👨‍🏫 ${c.instructors[0].fullName}` : '👨‍🏫 No instructor assigned';
+
+            // About section
+            document.getElementById('course-full-description').textContent = c.description || 'No description provided.';
+            document.getElementById('instructor-cards').innerHTML = c.instructors.map(i => `
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;
+                     background:var(--page-bg);border-radius:12px;border:1px solid var(--border-light);">
+                    <div class="user-avatar" style="font-size:14px;background:var(--brand-primary);">${getInitials(i.fullName)}</div>
+                    <div>
+                        <div style="font-weight:600;font-size:14px;color:var(--text-primary);">${i.fullName}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">${i.email}</div>
+                    </div>
+                </div>`).join('');
+
+            // Action buttons
+            renderActionButtons(c);
+
+            // Progress Tracker
+            renderProgressTracker(c);
+
+            // Content section
+            if (userRole === 'ADMIN' || userRole === 'INSTRUCTOR') {
+                show(document.getElementById('content-outline-section'));
+                document.getElementById('content-manage-link').innerHTML =
+                    `<a href="course-content.html?id=${c.id}" class="btn btn-sm btn-outline">Manage Content</a>`;
+                loadContentTree(c.id);
+            } else if (c.enrolled) {
+                show(document.getElementById('content-outline-section'));
+                document.getElementById('content-manage-link').innerHTML = '';
+                loadContentTree(c.id);
+            } else {
+                show(document.getElementById('not-enrolled-section'));
+            }
+
+            // Announcements section
+            loadCourseAnnouncements(c.id);
+            
+            const isAssignedInstructor = userRole === 'INSTRUCTOR' && c.instructors.some(i => i.id === userId);
+            if (userRole === 'ADMIN' || isAssignedInstructor) {
+                const postBtn = document.getElementById('btn-post-ann');
+                if (postBtn) { postBtn.classList.remove('hidden'); postBtn.style.display = 'flex'; }
+            }
+
+            // Attendance section
+            initAttendanceSection(c);
+
+        } catch (err) {
+            hide(document.getElementById('loading-state'));
+            showToast('Failed to load course: ' + err.message, 'error');
+        }
+    })();
+
+    function renderProgressTracker(c) {
+        document.getElementById('current-progress-text').textContent = c.currentProgress || 'No progress reported yet.';
+        document.getElementById('progress-input').value = c.currentProgress || '';
+
+        // Only assigned instructors can edit
+        const isAssignedInstructor = userRole === 'INSTRUCTOR' && c.instructors.some(i => i.id === userId);
+        if (isAssignedInstructor) {
+            show(document.getElementById('btn-edit-progress'));
+        }
+    }
+
+    function toggleProgressEdit(showEdit) {
+        if (showEdit) {
+            hide(document.getElementById('progress-view-mode'));
+            show(document.getElementById('progress-edit-mode'));
+            hide(document.getElementById('btn-edit-progress'));
+        } else {
+            show(document.getElementById('progress-view-mode'));
+            hide(document.getElementById('progress-edit-mode'));
+            show(document.getElementById('btn-edit-progress'));
+        }
+    }
+
+    async function saveProgress() {
+        const newVal = document.getElementById('progress-input').value.trim();
+        try {
+            const res = await apiCall(`/courses/${courseId}/progress`, { method: 'PATCH', body: { currentProgress: newVal } });
+            showToast('Progress updated successfully', 'success');
+            document.getElementById('current-progress-text').textContent = res.data.currentProgress || 'No progress reported yet.';
+            toggleProgressEdit(false);
+        } catch(e) {
+            showToast('Failed to update progress: ' + e.message, 'error');
+        }
+    }
+
+    function renderActionButtons(c) {
+        const container = document.getElementById('action-buttons');
+        let html = '';
+        if (userRole === 'ADMIN' || userRole === 'INSTRUCTOR') {
+            const canViewPerformance = userRole === 'ADMIN' || (userRole === 'INSTRUCTOR' && (c.instructors || []).some(i => i.id === userId));
+            html += `<a href="course-form.html?id=${c.id}" class="btn btn-secondary">✏️ Edit Course</a>`;
+            html += `<a href="course-content.html?id=${c.id}" class="btn btn-outline">📁 Manage Content</a>`;
+            if (canViewPerformance) {
+                html += `<button onclick="openPerformanceModal(${c.id})" class="btn btn-outline">Performance</button>`;
+            }
+            if (userRole === 'ADMIN') {
+                html += `<a href="course-enrollments.html?id=${c.id}" class="btn btn-outline">👤 Enrollments</a>`;
+            }
+            if (c.status === 'DRAFT') {
+                html += `<button onclick="publishCourse(${c.id})" class="btn btn-primary mt-2">🚀 Publish</button>`;
+            }
+            if (c.status === 'ACTIVE') {
+                html += `<button onclick="archiveCourse(${c.id})" class="btn btn-danger mt-2">📦 Archive</button>`;
+            }
+        } else {
+            // Student actions
+            if (c.enrolled) {
+                html += `<div style="background:#f0fdf4;color:var(--success);padding:12px 16px;border-radius:10px;font-size:14px;font-weight:700;text-align:center;border:1px solid #bbf7d0;">✅ Enrolled</div>`;
+            }
+        }
+        container.innerHTML = html;
+    }
+
+    async function openPerformanceModal(courseId) {
+        const modal = document.getElementById('performance-modal');
+        const title = document.getElementById('performance-title');
+        const summary = document.getElementById('performance-summary');
+        const body = document.getElementById('performance-table-body');
+        const courseTitle = document.getElementById('course-title').textContent || 'Course';
+
+        title.textContent = `Performance: ${courseTitle}`;
+        summary.textContent = 'Loading student performance predictions...';
+        body.innerHTML = `<tr><td colspan="6" class="loading">Loading predictions...</td></tr>`;
+        modal.classList.add('open');
+
+        try {
+            const res = await apiCall(`/performance/courses/${courseId}/predictions`);
+            const data = res.data || res;
+            const predictions = data.predictions || [];
+            summary.textContent = `${predictions.length} student${predictions.length === 1 ? '' : 's'} evaluated for ${data.courseCode || courseTitle}.`;
+
+            if (!predictions.length) {
+                body.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--gray-500);padding:24px;">No enrolled students found for this course.</td></tr>`;
+                return;
+            }
+
+            body.innerHTML = predictions.map(p => `
+                <tr>
+                    <td>
+                        <div style="font-weight:600;color:var(--gray-900);">${escHtml(p.studentName)}</div>
+                        <div style="font-size:12px;color:var(--gray-500);">${escHtml(p.studentEmail)}</div>
+                    </td>
+                    <td>${getPerformanceBadge(p.performanceCategory)}</td>
+                    <td>${p.confidence != null ? Math.round(Number(p.confidence) * 100) + '%' : 'N/A'}</td>
+                    <td>${formatPercent(p.attendancePercentage)}</td>
+                    <td>${formatPercent(p.averageExamPercentage)}</td>
+                    <td style="font-size:12px;color:var(--gray-600);">${p.supportTicketCount || 0} tickets - ${p.lastActivityDaysAgo ?? 0} days idle</td>
+                </tr>
+            `).join('');
+        } catch (err) {
+            summary.textContent = err.message || 'Prediction failed. Check that Python, dependencies, and model files are available.';
+            body.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:24px;">Unable to load performance predictions.</td></tr>`;
+        }
+    }
+
+    function closePerformanceModal() {
+        document.getElementById('performance-modal').classList.remove('open');
+    }
+
+    function getPerformanceBadge(category) {
+        const value = category || 'Unknown';
+        const badgeClass = {
+            Good: 'badge-active',
+            Average: 'badge-student',
+            Medium: 'badge-admin',
+            Low: 'badge-inactive'
+        }[value] || 'badge-draft';
+        return `<span class="badge ${badgeClass}">${escHtml(value)}</span>`;
+    }
+
+    function formatPercent(value) {
+        return `${Number(value || 0).toFixed(1)}%`;
+    }
+
+    async function loadContentTree(id) {
+        try {
+            const res = await apiCall(`/courses/${id}/content`);
+            const weeks = res.data || [];
+            const container = document.getElementById('content-tree-container');
+            if (!weeks.length) {
+                container.innerHTML = '<p class="text-muted" style="padding:16px 0;">No content added yet.</p>';
+                return;
+            }
+            container.innerHTML = weeks.map(week => `
+                <div style="margin-bottom:0;">
+                    <div class="content-tree-week">📅 ${week.title}</div>
+                    ${(week.children || []).map(mod => `
+                        <div>
+                            <div class="content-tree-module">📂 ${mod.title}</div>
+                            ${(mod.children || []).map(topic => `
+                                <div>
+                                    <div class="content-tree-topic">🔷 ${topic.title}</div>
+                                    ${(topic.materials || []).map(m =>
+                                        `<div class="content-tree-material" style="margin-left:8px;border-left:2px solid var(--border-light);padding-left:72px;">
+                                            ${getMaterialIcon(m.materialType)}
+                                            <a href="${m.fileUrl}" target="_blank">${m.title}</a>
+                                            ${m.formattedFileSize ? `<span style="color:var(--gray-400);">(${m.formattedFileSize})</span>` : ''}
+                                        </div>`).join('')}
+                                </div>`).join('')}
+                            ${(mod.materials || []).map(m =>
+                                `<div class="content-tree-material">
+                                    ${getMaterialIcon(m.materialType)}
+                                    <a href="${m.fileUrl}" target="_blank">${m.title}</a>
+                                </div>`).join('')}
+                        </div>`).join('')}
+                    ${(week.materials || []).map(m =>
+                        `<div class="content-tree-material" style="margin-left:0;border-left:2px solid var(--border-light);padding-left:20px;">
+                            ${getMaterialIcon(m.materialType)}
+                            <a href="${m.fileUrl}" target="_blank">${m.title}</a>
+                        </div>`).join('')}
+                </div>`).join('');
+        } catch (err) {
+            document.getElementById('content-tree-container').innerHTML =
+                '<p class="text-muted">Could not load content.</p>';
+        }
+    }
+
+    async function publishCourse(id) {
+        if (!confirm('Publish this course? Students will be able to see and enroll.')) return;
+        try {
+            await apiCall(`/courses/${id}/publish`, { method: 'POST' });
+            showToast('Course published!', 'success');
+            setTimeout(() => location.reload(), 800);
+        } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function archiveCourse(id) {
+        if (!confirm('Archive this course? It will be removed from the student catalog.')) return;
+        try {
+            await apiCall(`/courses/${id}/archive`, { method: 'POST' });
+            showToast('Course archived.', 'info');
+            setTimeout(() => location.reload(), 800);
+        } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    // ════════════════════════════════════════════════
+    // COURSE ANNOUNCEMENTS
+    // ════════════════════════════════════════════════
+
+    async function loadCourseAnnouncements(id) {
+        try {
+            const res = await apiCall(`/announcements/course/${id}`);
+            const list = document.getElementById('course-ann-list');
+            const announcements = res.data || [];
+            if (!announcements.length) {
+                list.innerHTML = '<p style="color:#9ca3af;font-size:13px;">No announcements yet.</p>';
+                return;
+            }
+            list.innerHTML = announcements.map(a => renderCourseAnnCard(a)).join('');
+        } catch (e) { console.error('Course announcements error:', e); }
+    }
+
+    function renderCourseAnnCard(a) {
+        const canDelete = userRole === 'ADMIN' || (userRole === 'INSTRUCTOR' && a.authorId === userId);
+        const deleteBtn = canDelete
+            ? `<button class="ann-delete-btn" onclick="deleteCourseAnn(${a.id})" title="Delete">🗑</button>`
+            : '';
+        return `
+            <div class="announcement-card" id="course-ann-card-${a.id}" style="margin-bottom:10px;">
+                <div class="announcement-card-top">
+                    <span class="announcement-title">${escHtml(a.title)}</span>
+                    ${deleteBtn}
+                </div>
+                <div class="announcement-body">${escHtml(a.message)}</div>
+                <div class="announcement-meta">Posted by <strong>${escHtml(a.authorName)}</strong> · ${formatDateTime(a.createdAt)}</div>
+            </div>`;
+    }
+
+    function toggleCourseAnnForm() {
+        const form = document.getElementById('course-ann-form');
+        const icon = document.getElementById('course-ann-btn-icon');
+        const isHidden = form.classList.contains('hidden');
+        form.classList.toggle('hidden', !isHidden);
+        icon.textContent = isHidden ? '✕' : '+';
+    }
+
+    async function submitCourseAnn() {
+        const title = document.getElementById('course-ann-title').value.trim();
+        const message = document.getElementById('course-ann-message').value.trim();
+        if (!title || !message) { showToast('Title and message are required.', 'error'); return; }
+        const btn = document.getElementById('course-ann-submit-btn');
+        setLoading(btn, true, 'Posting...');
+        try {
+            await apiCall('/announcements', { method: 'POST', body: { title, message, courseId: Number(courseId) } });
+            showToast('Announcement posted!', 'success');
+            document.getElementById('course-ann-title').value = '';
+            document.getElementById('course-ann-message').value = '';
+            toggleCourseAnnForm();
+            await loadCourseAnnouncements(courseId);
+        } catch (e) { showToast(e.message || 'Failed to post.', 'error'); }
+        finally { setLoading(btn, false); }
+    }
+
+    async function deleteCourseAnn(id) {
+        if (!confirm('Delete this announcement?')) return;
+        try {
+            await apiCall(`/announcements/${id}`, { method: 'DELETE' });
+            const card = document.getElementById(`course-ann-card-${id}`);
+            if (card) { card.style.opacity = '0'; setTimeout(() => card.remove(), 300); }
+            showToast('Deleted.', 'success');
+        } catch (e) { showToast(e.message || 'Failed to delete.', 'error'); }
+    }
+
+    function escHtml(str) {
+        return String(str ?? '')
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;')
+            .replace(/'/g,'&#39;');
+    }
+
+    // ════════════════════════════════════════════════
+    // ATTENDANCE MANAGEMENT
+    // ════════════════════════════════════════════════
+
+    // Show attendance section for assigned instructor or admin
+    function initAttendanceSection(courseData) {
+        const isAssignedInstructor = userRole === 'INSTRUCTOR' && courseData.instructors.some(i => i.id === userId);
+        if (userRole === 'ADMIN' || isAssignedInstructor) {
+            show(document.getElementById('attendance-section'));
+            // Set max date to today
+            document.getElementById('att-import-date').max = new Date().toISOString().split('T')[0];
+            document.getElementById('att-import-date').value = new Date().toISOString().split('T')[0];
+            loadAttendanceDates();
+        }
+    }
+
+    function toggleAttImportForm() {
+        const form = document.getElementById('att-import-form');
+        const icon = document.getElementById('att-import-btn-icon');
+        const isHidden = form.classList.contains('hidden');
+        form.classList.toggle('hidden', !isHidden);
+        icon.textContent = isHidden ? '✕' : '+';
+    }
+
+    // Download a CSV template pre-filled with enrolled student emails
+    async function downloadAttTemplate(e) {
+        e.preventDefault();
+        try {
+            // Fetch enrollments to get student emails
+            const res = await apiCall(`/courses/${courseId}/attendance/dates`);
+            // Build template with header
+            let csv = 'StudentEmail,Status\n';
+            // We need enrolled students — fetch from enrollments endpoint
+            try {
+                const enrollRes = await apiCall(`/courses/${courseId}/enrollments?page=0&size=500`);
+                const enrollments = enrollRes.data?.content || enrollRes.data || [];
+                enrollments.forEach(e => {
+                    if (e.status === 'ACTIVE') {
+                        csv += `${e.studentEmail},PRESENT\n`;
+                    }
+                });
+            } catch (err) {
+                // Fallback: empty template
+                csv += 'student@example.com,PRESENT\n';
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_template_course_${courseId}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            showToast('Failed to generate template.', 'error');
+        }
+    }
+
+    // Submit the attendance CSV import
+    async function submitAttImport() {
+        const dateVal = document.getElementById('att-import-date').value;
+        const fileInput = document.getElementById('att-import-file');
+        const file = fileInput.files[0];
+
+        if (!dateVal) { showToast('Please select a date.', 'error'); return; }
+        if (!file) { showToast('Please select a CSV file.', 'error'); return; }
+
+        const btn = document.getElementById('att-import-submit-btn');
+        setLoading(btn, true, 'Uploading...');
+
+        try {
+            const csvContent = await file.text();
+            const res = await apiCall(`/courses/${courseId}/attendance/import`, {
+                method: 'POST',
+                body: { csvContent, date: dateVal }
+            });
+
+            const r = res.data;
+            const resultDiv = document.getElementById('att-import-result');
+            let resultHtml = `<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                <span style="font-weight:600; color:var(--text-primary);">📊 Import Summary — ${r.date}</span>
+            </div>
+            <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:12px;">
+                <span style="color:var(--text-body);">Total: <strong>${r.totalRows}</strong></span>
+                <span style="color:#16a34a;">✓ Created: <strong>${r.created}</strong></span>
+                <span style="color:#2563eb;">↻ Updated: <strong>${r.updated}</strong></span>
+                ${r.skipped > 0 ? `<span style="color:#d97706;">⚠ Skipped: <strong>${r.skipped}</strong></span>` : ''}
+            </div>`;
+
+            if (r.errors && r.errors.length > 0) {
+                resultHtml += `<div style="margin-top:8px; padding:8px 12px; background:#fef2f2; border-radius:8px; border:1px solid #fecaca;">
+                    <div style="font-size:12px; font-weight:600; color:#991b1b; margin-bottom:4px;">Errors:</div>
+                    ${r.errors.map(e => `<div style="font-size:11px; color:#991b1b;">• ${escHtml(e)}</div>`).join('')}
+                </div>`;
+            }
+
+            resultDiv.innerHTML = resultHtml;
+            show(resultDiv);
+
+            showToast(`Attendance imported: ${r.created} created, ${r.updated} updated.`, 'success');
+
+            // Reset form
+            fileInput.value = '';
+            toggleAttImportForm();
+
+            // Refresh dates dropdown
+            await loadAttendanceDates();
+            // Auto-select the imported date
+            document.getElementById('att-date-select').value = r.date;
+            loadAttendanceForDate();
+
+        } catch (err) {
+            showToast(err.message || 'Failed to import attendance.', 'error');
+        } finally {
+            setLoading(btn, false);
+        }
+    }
+
+    // Load available attendance dates into the dropdown
+    async function loadAttendanceDates() {
+        try {
+            const res = await apiCall(`/courses/${courseId}/attendance/dates`);
+            const dates = res.data || [];
+            const select = document.getElementById('att-date-select');
+            const currentVal = select.value;
+
+            select.innerHTML = '<option value="">— Select a date —</option>';
+            dates.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = formatDate(d);
+                select.appendChild(opt);
+            });
+
+            // Restore selection if still valid
+            if (currentVal && dates.includes(currentVal)) {
+                select.value = currentVal;
+            }
+        } catch (err) {
+            console.error('Failed to load attendance dates:', err);
+        }
+    }
+
+    // Load and display attendance records for the selected date
+    async function loadAttendanceForDate() {
+        const dateVal = document.getElementById('att-date-select').value;
+        const container = document.getElementById('att-records-container');
+
+        if (!dateVal) {
+            container.innerHTML = '<p style="color:#9ca3af; font-size:13px;">Select a date to view attendance records.</p>';
+            return;
+        }
+
+        container.innerHTML = '<p style="color:#9ca3af; font-size:13px;">Loading...</p>';
+
+        try {
+            const res = await apiCall(`/courses/${courseId}/attendance?date=${dateVal}`);
+            const records = res.data || [];
+
+            if (!records.length) {
+                container.innerHTML = '<p style="color:#9ca3af; font-size:13px;">No records found for this date.</p>';
+                return;
+            }
+
+            // Summary counts
+            const counts = { PRESENT: 0, ABSENT: 0, LATE: 0, EXCUSED: 0 };
+            records.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+
+            let html = `<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; font-size:12px;">
+                <span style="background:#dcfce7; color:#166534; padding:3px 10px; border-radius:20px; font-weight:600;">Present: ${counts.PRESENT}</span>
+                <span style="background:#fee2e2; color:#991b1b; padding:3px 10px; border-radius:20px; font-weight:600;">Absent: ${counts.ABSENT}</span>
+                ${counts.LATE > 0 ? `<span style="background:#fef3c7; color:#92400e; padding:3px 10px; border-radius:20px; font-weight:600;">Late: ${counts.LATE}</span>` : ''}
+                ${counts.EXCUSED > 0 ? `<span style="background:#dbeafe; color:#1e40af; padding:3px 10px; border-radius:20px; font-weight:600;">Excused: ${counts.EXCUSED}</span>` : ''}
+            </div>`;
+
+            html += `<div style="max-height:320px; overflow-y:auto; border:1px solid var(--border-light); border-radius:10px;">
+                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead>
+                        <tr style="background:var(--page-bg); position:sticky; top:0;">
+                            <th style="padding:8px 12px; text-align:left; font-weight:600; color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Student</th>
+                            <th style="padding:8px 12px; text-align:center; font-weight:600; color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            records.forEach(r => {
+                html += `<tr style="border-top:1px solid var(--border-light);">
+                    <td style="padding:8px 12px;">
+                        <div style="font-weight:500; color:var(--text-primary); font-size:13px;">${escHtml(r.studentName)}</div>
+                        <div style="font-size:11px; color:var(--text-muted);">${escHtml(r.studentEmail)}</div>
+                    </td>
+                    <td style="padding:8px 12px; text-align:center;">${getAttendanceStatusBadge(r.status)}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+
+        } catch (err) {
+            container.innerHTML = '<p style="color:#ef4444; font-size:13px;">Failed to load attendance records.</p>';
+        }
+    }
+
+    function getAttendanceStatusBadge(status) {
+        const map = {
+            'PRESENT': '<span class="badge badge-active">Present</span>',
+            'ABSENT': '<span class="badge badge-inactive">Absent</span>',
+            'LATE': '<span class="badge" style="background:#fef3c7;color:#92400e;">Late</span>',
+            'EXCUSED': '<span class="badge" style="background:#dbeafe;color:#1e40af;">Excused</span>',
+        };
+        return map[status] || `<span class="badge">${status}</span>`;
+    }
+
+    document.getElementById('performance-modal').addEventListener('click', function (event) {
+        if (event.target === this) {
+            closePerformanceModal();
+        }
+    });
+</script>
+</body>
+</html>
