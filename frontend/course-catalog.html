@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Catalog — Hi-Tech Institute LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        .course-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: box-shadow 150ms ease, transform 150ms ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .course-card:hover {
+            box-shadow: 0 4px 18px rgba(0,0,0,.08);
+            transform: translateY(-2px);
+        }
+        .course-thumbnail {
+            height: 140px;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            flex-shrink: 0;
+        }
+        .course-card-body {
+            padding: 18px 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .course-card-footer {
+            padding: 14px 20px;
+            background: #fafbff;
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .course-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .course-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<main class="container page-content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Course Catalog</h1>
+            <p>Browse all available courses and enroll today</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="content-card" style="padding:0; margin-bottom:24px;">
+        <div class="filter-bar" style="border-radius:16px;">
+            <input type="text" id="search-input" class="form-control search-input"
+                   placeholder="🔍 Search courses by title...">
+            <select id="program-filter" class="form-control" style="max-width:220px;">
+                <option value="">All Programs</option>
+            </select>
+            <select id="difficulty-filter" class="form-control" style="max-width:180px;">
+                <option value="">Difficulty Level</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+            </select>
+            <select id="sort-filter" class="form-control" style="max-width:200px;">
+                <option value="">Sort By: Newest First</option>
+                <option value="fee-low">Fee: Low to High</option>
+                <option value="fee-high">Fee: High to Low</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" onclick="resetFilters()">Reset</button>
+        </div>
+    </div>
+
+    <!-- Results info -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <p id="results-info" class="text-sm" style="color:var(--text-muted);font-weight:600;"></p>
+    </div>
+
+    <!-- Course Grid -->
+    <div id="courses-grid" class="course-grid"></div>
+
+    <!-- Loading skeleton -->
+    <div id="loading-grid" class="course-grid">
+        ${Array(6).fill('<div class="course-card"><div class="course-thumbnail"><div class="skeleton" style="width:80px;height:80px;border-radius:50%;"></div></div><div class="course-card-body"><div class="skeleton" style="width:80%;height:18px;margin-bottom:8px;"></div><div class="skeleton" style="width:60%;height:14px;margin-bottom:12px;"></div><div class="skeleton" style="width:100%;height:40px;"></div></div></div>').join('')}
+    </div>
+
+    <!-- Empty state -->
+    <div class="hidden empty-state" id="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <h3 class="empty-state-title" style="font-size:20px;">No courses found</h3>
+        <p class="empty-state-sub mt-2">Try adjusting your search or filters.</p>
+        <button class="btn btn-secondary mt-4" onclick="resetFilters()">Clear Filters</button>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination-bar" style="display:none;margin-top:24px;border:none;">
+        <span id="pagination-info" class="text-sm text-muted"></span>
+        <div class="pagination-controls">
+            <button class="page-btn" id="prev-btn" onclick="goToPage(currentPage - 1)">‹</button>
+            <div id="page-numbers" class="pagination-controls"></div>
+            <button class="page-btn" id="next-btn" onclick="goToPage(currentPage + 1)">›</button>
+        </div>
+    </div>
+
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    buildNavbar('courses');
+
+    let currentPage = 0, totalPages = 0;
+    let enrolledCourseIds = new Set();
+
+    // Load programs for filter dropdown
+    (async () => {
+        try {
+            const res = await apiCall('/courses/programs');
+            const sel = document.getElementById('program-filter');
+            res.data.forEach(p => {
+                sel.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            });
+        } catch(e) {}
+    })();
+
+    // Load enrolled course IDs first, THEN render catalog.
+    // FIX: loadCatalog() must run AFTER enrolledCourseIds is populated so that
+    // already-enrolled students see "✅ Enrolled" instead of "Enroll & Pay".
+    (async () => {
+        try {
+            const res = await apiCall('/courses/my');
+            (res.data || []).forEach(c => enrolledCourseIds.add(c.id));
+        } catch(e) { /* if fetch fails, catalog still loads */ }
+        loadCatalog(); // Always called here — after enrollment IDs are ready
+    })();
+
+    let searchTimeout;
+    document.getElementById('search-input').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => { currentPage = 0; loadCatalog(); }, 350);
+    });
+    document.getElementById('program-filter').addEventListener('change', () => { currentPage = 0; loadCatalog(); });
+    document.getElementById('sort-filter').addEventListener('change', () => { currentPage = 0; loadCatalog(); });
+
+    function resetFilters() {
+        document.getElementById('search-input').value = '';
+        document.getElementById('program-filter').value = '';
+        document.getElementById('sort-filter').value = '';
+        currentPage = 0; loadCatalog();
+    }
+
+    async function loadCatalog() {
+        const search    = document.getElementById('search-input').value.trim();
+        const programId = document.getElementById('program-filter').value;
+
+        show(document.getElementById('loading-grid'));
+        hide(document.getElementById('courses-grid'));
+        hide(document.getElementById('empty-state'));
+        document.getElementById('pagination-bar').style.display = 'none';
+        document.getElementById('results-info').textContent = '';
+
+        const params = new URLSearchParams({
+            page: currentPage, size: 12,
+            ...(search    ? { search }    : {}),
+            ...(programId ? { programId } : {})
+        });
+
+        try {
+            const res = await apiCall(`/courses/catalog?${params}`);
+            const page = res.data;
+            totalPages = page.totalPages;
+
+            hide(document.getElementById('loading-grid'));
+
+            const total = page.totalElements;
+            document.getElementById('results-info').textContent =
+                `${total} course${total !== 1 ? 's' : ''} available`;
+
+            if (!page.content.length) {
+                show(document.getElementById('empty-state'));
+                return;
+            }
+
+            let courses = page.content;
+
+            // Client-side sort (server supports only createdAt for now)
+            const sort = document.getElementById('sort-filter').value;
+            if (sort === 'fee-low')  courses = [...courses].sort((a, b) => a.courseFee - b.courseFee);
+            if (sort === 'fee-high') courses = [...courses].sort((a, b) => b.courseFee - a.courseFee);
+
+            renderCourses(courses);
+            show(document.getElementById('courses-grid'));
+            renderPagination(page);
+        } catch (err) {
+            hide(document.getElementById('loading-grid'));
+            showToast('Failed to load catalog: ' + err.message, 'error');
+        }
+    }
+
+    function renderCourses(courses) {
+        const grid = document.getElementById('courses-grid');
+        grid.innerHTML = courses.map(c => {
+            const isEnrolled = enrolledCourseIds.has(c.id);
+            const imageName = getCourseImage(c.title);
+            const feeText = parseFloat(c.courseFee) === 0
+                ? '<span style="color:var(--success);font-weight:700;">Free</span>'
+                : `<span style="font-weight:700;color:var(--text-primary);">${formatCurrency(c.courseFee)}</span>`;
+
+            let ctaButton = '';
+            if (isEnrolled) {
+                ctaButton = `<a href="course-detail.html?id=${c.id}" class="btn btn-success btn-full">✅ Go to Course</a>`;
+            } else if (c.enrollmentType === 'ADMIN_ONLY') {
+                ctaButton = `<button class="btn btn-secondary btn-full" disabled>Contact Admin to Enroll</button>`;
+            } else if (parseFloat(c.courseFee) === 0) {
+                ctaButton = `<a href="finance-checkout.html?courseId=${c.id}" class="btn btn-primary btn-full">Enroll Now</a>`;
+            } else {
+                ctaButton = `<a href="finance-checkout.html?courseId=${c.id}" class="btn btn-primary btn-full">Enroll &amp; Pay</a>`;
+            }
+
+            return `
+            <div class="course-card">
+                <div class="course-thumbnail" style="padding:0;">
+                    <img src="assets/courses/${imageName}" style="width: 100%; height: 100%; object-fit: cover;" alt="${c.title}" />
+                </div>
+                <div class="course-card-body">
+                    <div style="font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--brand-primary);margin-bottom:6px;">
+                        ${c.programName}
+                    </div>
+                    <h3 style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px;line-height:1.4;">
+                        <a href="course-detail.html?id=${c.id}" style="color:inherit;text-decoration:none;">${c.title}</a>
+                    </h3>
+                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;">
+                        <span style="font-family:monospace;background:var(--page-bg);padding:2px 6px;border-radius:4px;">${c.courseCode}</span>
+                        ${c.durationValue ? `<span>📅 ${c.durationValue} ${c.durationUnit?.toLowerCase() || ''}</span>` : ''}
+                        <span>👥 ${c.enrolledCount} st.</span>
+                    </div>
+                    <div style="flex:1;"></div>
+                    ${ctaButton}
+                </div>
+                <div class="course-card-footer">
+                    ${feeText}
+                    ${isEnrolled ? '<span style="font-size:11px;font-weight:700;color:var(--success);background:#f0fdf4;padding:2px 8px;border-radius:99px;">ENROLLED</span>' : ''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderPagination(page) {
+        if (page.totalPages <= 1) return;
+        const bar = document.getElementById('pagination-bar');
+        const start = page.number * page.size + 1;
+        const end = Math.min(start + page.size - 1, page.totalElements);
+        document.getElementById('pagination-info').textContent = `Showing ${start}–${end} of ${page.totalElements}`;
+
+        const nums = document.getElementById('page-numbers');
+        nums.innerHTML = '';
+        for (let i = 0; i < page.totalPages; i++) {
+            nums.innerHTML += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i + 1}</button>`;
+        }
+
+        document.getElementById('prev-btn').disabled = currentPage === 0;
+        document.getElementById('next-btn').disabled = currentPage >= page.totalPages - 1;
+        bar.style.display = 'flex';
+    }
+
+    function goToPage(p) {
+        if (p < 0 || p >= totalPages) return;
+        currentPage = p; loadCatalog();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // load initial data
+    (async () => {
+        try {
+            const res = await apiCall('/courses/my');
+            (res.data || []).forEach(c => enrolledCourseIds.add(c.id));
+            loadCatalog();
+        } catch (e) {
+            loadCatalog(); // try to load catalog even if my courses fail
+        }
+    })();
+</script>
+</body>
+</html>
