@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Form — Hi-Tech Institute LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<main class="container page-content" style="max-width:860px;">
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb" style="margin-bottom:20px;">
+        <a href="dashboard.html">Dashboard</a> <span class="breadcrumb-sep">/</span>
+        <a href="manage-courses.html">Courses</a> <span class="breadcrumb-sep">/</span>
+        <span id="breadcrumb-label">Create Course</span>
+    </div>
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1 id="form-title">Create New Course</h1>
+        </div>
+    </div>
+
+    <div class="content-card">
+
+        <div class="alert alert-danger hidden" id="error-banner">
+            <span class="alert-icon">⚠️</span><span id="error-text"></span>
+        </div>
+
+        <form id="course-form" novalidate>
+
+            <!-- Basic Info -->
+            <div class="section-title" style="margin-top:0;">Course Information</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="two-col">
+                <div class="form-group" style="grid-column:1/-1;">
+                    <label class="form-label" for="title">Course Title *</label>
+                    <input type="text" id="title" name="title" class="form-control"
+                           placeholder="e.g. Introduction to Java Programming">
+                    <div class="form-error" id="title-error"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="courseCode">Course Code *</label>
+                    <input type="text" id="courseCode" name="courseCode" class="form-control"
+                           placeholder="e.g. SE-101" style="text-transform:uppercase;">
+                    <div class="form-hint">Must be unique across all courses</div>
+                    <div class="form-error" id="courseCode-error"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="programId">Program / Category *</label>
+                    <select id="programId" name="programId" class="form-control">
+                        <option value="">Select program...</option>
+                    </select>
+                    <div class="form-error" id="programId-error"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="description">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="4"
+                          placeholder="Describe what students will learn..." maxlength="2000"
+                          style="resize:vertical;"></textarea>
+                <div class="form-hint" id="desc-counter">0 / 2000 characters</div>
+            </div>
+
+            <!-- Duration & Fee -->
+            <div class="section-title" style="margin-top:8px;">Duration & Pricing</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" class="two-col">
+                <div class="form-group">
+                    <label class="form-label" for="durationValue">Duration</label>
+                    <input type="number" id="durationValue" name="durationValue" class="form-control"
+                           placeholder="e.g. 12" min="1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="durationUnit">Unit</label>
+                    <select id="durationUnit" name="durationUnit" class="form-control">
+                        <option value="WEEKS">Weeks</option>
+                        <option value="MONTHS">Months</option>
+                        <option value="DAYS">Days</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="courseFee">Course Fee (LKR) *</label>
+                    <input type="number" id="courseFee" name="courseFee" class="form-control"
+                           placeholder="e.g. 15000.00" min="0" step="0.01">
+                    <div class="form-hint">Set to 0 for free courses</div>
+                    <div class="form-error" id="courseFee-error"></div>
+                </div>
+            </div>
+
+            <!-- Enrollment Settings -->
+            <div class="section-title" style="margin-top:8px;">Enrollment Settings</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="two-col">
+                <div class="form-group">
+                    <label class="form-label" for="enrollmentType">Enrollment Type</label>
+                    <select id="enrollmentType" name="enrollmentType" class="form-control">
+                        <option value="OPEN">Open — Students can self-enroll</option>
+                        <option value="ADMIN_ONLY">Admin Only — Manual enrollment</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="maxStudents">
+                        Max Students <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);">(Optional)</span>
+                    </label>
+                    <input type="number" id="maxStudents" name="maxStudents" class="form-control"
+                           placeholder="Leave blank for unlimited" min="1">
+                </div>
+            </div>
+
+            <!-- Instructor Assignment (Admin only) -->
+            <div id="instructor-section">
+                <div class="section-title" style="margin-top:8px;">Instructor Assignment</div>
+                <div class="form-group">
+                    <label class="form-label" for="instructorSearch">Assign Instructors</label>
+                    <input type="text" id="instructorSearch" class="form-control"
+                           placeholder="Search instructors by name or email..." autocomplete="off">
+                    <div id="instructor-suggestions" style="border:1px solid var(--border-light);border-radius:10px;margin-top:4px;display:none;max-height:200px;overflow-y:auto;background:var(--card-bg);"></div>
+                    <div id="selected-instructors" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;"></div>
+                    <div class="form-hint">At least one instructor must be assigned before publishing</div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="margin-top:24px;display:flex;gap:12px;padding-top:16px;border-top:1px solid var(--border-subtle);">
+                <button type="submit" class="btn btn-secondary" id="save-draft-btn" data-action="draft">
+                    💾 Save as Draft
+                </button>
+                <button type="button" class="btn btn-primary" id="publish-btn" onclick="saveAndPublish()">
+                    🚀 Save &amp; Publish
+                </button>
+                <a href="manage-courses.html" class="btn btn-secondary">Cancel</a>
+            </div>
+
+        </form>
+    </div>
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    const userRole = getUserRole();
+    if (userRole === 'STUDENT') { window.location.href = 'dashboard.html'; }
+    buildNavbar('courses');
+
+    const params     = new URLSearchParams(window.location.search);
+    const editId     = params.get('id');
+    const isEdit     = !!editId;
+    let selectedInstructorIds = [];
+
+    if (isEdit) {
+        document.getElementById('breadcrumb-label').textContent = 'Edit Course';
+        document.getElementById('form-title').textContent       = 'Edit Course';
+        document.getElementById('save-draft-btn').textContent   = '💾 Save Changes';
+        document.getElementById('publish-btn').textContent      = '🚀 Save & Publish';
+        loadCourseForEdit(editId);
+    }
+
+    // Instructors section: only visible to Admin
+    if (userRole !== 'ADMIN') {
+        document.getElementById('instructor-section').style.display = 'none';
+    }
+
+    // Load programs
+    (async () => {
+        try {
+            const res = await apiCall('/courses/programs');
+            const sel = document.getElementById('programId');
+            res.data.forEach(p => {
+                sel.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            });
+        } catch(e) {}
+    })();
+
+    // Description counter
+    document.getElementById('description').addEventListener('input', function() {
+        document.getElementById('desc-counter').textContent = `${this.value.length} / 2000 characters`;
+    });
+
+    // Course code uppercase
+    document.getElementById('courseCode').addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+
+    // Load existing course for edit
+    async function loadCourseForEdit(id) {
+        try {
+            const res = await apiCall(`/courses/${id}`);
+            const c = res.data;
+            document.getElementById('title').value           = c.title;
+            document.getElementById('courseCode').value      = c.courseCode;
+            document.getElementById('courseCode').readOnly   = true;
+            document.getElementById('description').value     = c.description || '';
+            document.getElementById('programId').value       = c.programId;
+            document.getElementById('durationValue').value   = c.durationValue || '';
+            document.getElementById('durationUnit').value    = c.durationUnit || 'WEEKS';
+            document.getElementById('courseFee').value       = c.courseFee;
+            document.getElementById('enrollmentType').value  = c.enrollmentType;
+            document.getElementById('maxStudents').value     = c.maxStudents || '';
+            document.getElementById('desc-counter').textContent = `${(c.description||'').length} / 2000 characters`;
+
+            // Restore instructors
+            if (c.instructors && userRole === 'ADMIN') {
+                c.instructors.forEach(i => addInstructorTag(i.id, i.fullName, i.email));
+            }
+
+            // Disable publish if already active/archived
+            if (c.status === 'ARCHIVED') {
+                document.getElementById('publish-btn').disabled = true;
+                document.getElementById('publish-btn').title   = 'Archived courses cannot be re-published';
+            }
+        } catch (err) {
+            showToast('Failed to load course: ' + err.message, 'error');
+        }
+    }
+
+    // Instructor search
+    let searchTimeout;
+    document.getElementById('instructorSearch').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const q = this.value.trim();
+        if (q.length < 2) { document.getElementById('instructor-suggestions').style.display = 'none'; return; }
+        searchTimeout = setTimeout(() => searchInstructors(q), 300);
+    });
+
+    async function searchInstructors(query) {
+        try {
+            const res = await apiCall(`/admin/users?search=${encodeURIComponent(query)}&role=INSTRUCTOR&size=8`);
+            const users = res.data.content || [];
+            const box = document.getElementById('instructor-suggestions');
+            if (!users.length) { box.style.display = 'none'; return; }
+            box.innerHTML = users.map(u => `
+                <div onclick="addInstructorTag(${u.id}, '${u.fullName}', '${u.email}')"
+                     style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border-light);"
+                     onmouseover="this.style.background='var(--page-bg)'" onmouseout="this.style.background=''">
+                    <strong>${u.fullName}</strong> <span style="color:var(--text-muted);">${u.email}</span>
+                </div>`).join('');
+            box.style.display = 'block';
+        } catch(e) {}
+    }
+
+    function addInstructorTag(id, name, email) {
+        if (selectedInstructorIds.includes(id)) return;
+        selectedInstructorIds.push(id);
+        const tag = document.createElement('div');
+        tag.id = `instructor-tag-${id}`;
+        tag.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:var(--brand-light);color:var(--brand-primary);padding:4px 10px;border-radius:99px;font-size:13px;font-weight:600;';
+        tag.innerHTML = `${name} <button type="button" onclick="removeInstructor(${id})" style="background:none;border:none;cursor:pointer;color:var(--brand-primary);font-size:16px;line-height:1;">×</button>`;
+        document.getElementById('selected-instructors').appendChild(tag);
+        document.getElementById('instructor-suggestions').style.display = 'none';
+        document.getElementById('instructorSearch').value = '';
+    }
+
+    function removeInstructor(id) {
+        selectedInstructorIds = selectedInstructorIds.filter(i => i !== id);
+        document.getElementById(`instructor-tag-${id}`)?.remove();
+    }
+
+    // Build request body
+    function buildRequestBody() {
+        return {
+            title:          document.getElementById('title').value.trim(),
+            courseCode:     document.getElementById('courseCode').value.trim(),
+            description:    document.getElementById('description').value.trim() || null,
+            programId:      parseInt(document.getElementById('programId').value),
+            durationValue:  document.getElementById('durationValue').value
+                            ? parseInt(document.getElementById('durationValue').value) : null,
+            durationUnit:   document.getElementById('durationUnit').value,
+            courseFee:      parseFloat(document.getElementById('courseFee').value || '0'),
+            enrollmentType: document.getElementById('enrollmentType').value,
+            maxStudents:    document.getElementById('maxStudents').value
+                            ? parseInt(document.getElementById('maxStudents').value) : null,
+            instructorIds:  userRole === 'ADMIN' ? selectedInstructorIds : undefined
+        };
+    }
+
+    // Validate form
+    function validate() {
+        let valid = true;
+        const title = document.getElementById('title').value.trim();
+        const code  = document.getElementById('courseCode').value.trim();
+        const prog  = document.getElementById('programId').value;
+        const fee   = document.getElementById('courseFee').value;
+        if (!title) { showFieldError(document.getElementById('title'), 'Title is required'); valid = false; }
+        if (!code)  { showFieldError(document.getElementById('courseCode'), 'Course code is required'); valid = false; }
+        if (!prog)  { showFieldError(document.getElementById('programId'), 'Program is required'); valid = false; }
+        if (fee === '' || isNaN(parseFloat(fee)) || parseFloat(fee) < 0) {
+            showFieldError(document.getElementById('courseFee'), 'Enter a valid fee (0 for free)');
+            valid = false;
+        }
+        return valid;
+    }
+
+    // Form submission (Save as Draft / Save Changes)
+    document.getElementById('course-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        clearAllErrors(this);
+        hide(document.getElementById('error-banner'));
+        if (!validate()) return;
+
+        const btn = document.getElementById('save-draft-btn');
+        setLoading(btn, true, 'Saving...');
+
+        try {
+            let res;
+            if (isEdit) {
+                res = await apiCall(`/courses/${editId}`, { method: 'PATCH', body: buildRequestBody() });
+                showToast('Course updated!', 'success');
+            } else {
+                res = await apiCall('/courses', { method: 'POST', body: buildRequestBody() });
+                showToast('Course created as Draft!', 'success');
+            }
+            setTimeout(() => { window.location.href = `course-detail.html?id=${res.data.id}`; }, 800);
+        } catch (err) {
+            setLoading(btn, false);
+            if (err.data?.data) showApiErrors(this, err.data.data);
+            document.getElementById('error-text').textContent = err.message || 'Save failed.';
+            show(document.getElementById('error-banner'));
+        }
+    });
+
+    // Save and publish
+    async function saveAndPublish() {
+        clearAllErrors(document.getElementById('course-form'));
+        hide(document.getElementById('error-banner'));
+        if (!validate()) return;
+
+        const btn = document.getElementById('publish-btn');
+        setLoading(btn, true, 'Publishing...');
+
+        try {
+            let courseId = editId;
+            if (!isEdit) {
+                const res = await apiCall('/courses', { method: 'POST', body: buildRequestBody() });
+                courseId = res.data.id;
+            } else {
+                await apiCall(`/courses/${editId}`, { method: 'PATCH', body: buildRequestBody() });
+            }
+            await apiCall(`/courses/${courseId}/publish`, { method: 'POST' });
+            showToast('Course published! Students can now enroll.', 'success');
+            setTimeout(() => { window.location.href = `course-detail.html?id=${courseId}`; }, 900);
+        } catch (err) {
+            setLoading(btn, false);
+            document.getElementById('error-text').textContent = err.message || 'Publish failed.';
+            show(document.getElementById('error-banner'));
+        }
+    }
+</script>
+</body>
+</html>
