@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Courses — Hi-Tech Institute LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="main-navbar"></nav>
+    <div id="toast-container"></div>
+
+    <!-- Archive Confirmation Modal -->
+    <div class="modal-overlay" id="confirm-modal">
+        <div class="modal">
+            <h3 class="modal-title" id="modal-title">Archive Course</h3>
+            <p class="modal-body" id="modal-body">Are you sure?</p>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-danger" id="modal-confirm-btn" onclick="confirmAction()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="container page-content">
+        <div class="page-header">
+            <div class="page-header-left">
+                <h1>Course Management</h1>
+                <p id="page-subtitle">Manage all LMS courses</p>
+            </div>
+            <a href="course-form.html" class="btn btn-primary" id="create-btn">+ Create New Course</a>
+        </div>
+
+        <!-- Filters -->
+        <div class="content-card" style="padding:0; margin-bottom:20px;">
+            <div class="filter-bar" style="border-radius:16px;">
+                <input type="text" id="search-input" class="form-control search-input"
+                    placeholder="🔍 Search by title or code...">
+                <select id="status-filter" class="form-control" style="max-width:160px;">
+                    <option value="">All Statuses</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="ARCHIVED">Archived</option>
+                </select>
+                <select id="program-filter" class="form-control" style="max-width:220px;">
+                    <option value="">All Programs</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" onclick="resetFilters()">Reset</button>
+            </div>
+        </div>
+
+        <!-- Courses Table -->
+        <div class="content-card" style="padding:0;">
+            <div class="content-card-hdr" style="margin: 22px 22px 16px 22px;">
+                <span class="content-card-title">Courses</span>
+                <span id="course-count" class="text-sm text-muted"></span>
+            </div>
+
+            <div id="table-loading" class="table-wrapper">
+                <table class="content-table">
+                    <tbody id="skeleton-body"></tbody>
+                </table>
+            </div>
+
+            <div class="table-wrapper hidden" id="table-container">
+                <table class="content-table">
+                    <thead>
+                        <tr>
+                            <th>Course</th>
+                            <th>Program</th>
+                            <th>Status</th>
+                            <th>Students</th>
+                            <th>Fee</th>
+                        </tr>
+                    </thead>
+                    <tbody id="courses-table-body"></tbody>
+                </table>
+            </div>
+
+            <div class="hidden empty-state" id="empty-state">
+                <div class="empty-state-icon">📚</div>
+                <p class="empty-state-title">No courses found.</p>
+                <a href="course-form.html" class="btn btn-primary mt-2" style="margin-top:12px;">Create Your First
+                    Course</a>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination-bar" style="display:none;">
+                <span id="pagination-info" class="text-sm text-muted"></span>
+                <div class="pagination-controls">
+                    <button class="page-btn" id="prev-btn" onclick="goToPage(currentPage - 1)">‹</button>
+                    <div id="page-numbers" class="pagination-controls"></div>
+                    <button class="page-btn" id="next-btn" onclick="goToPage(currentPage + 1)">›</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+            <div class="footer-links">
+                <a href="#">Support</a>
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/common.js"></script>
+    <script>
+        requireAuth();
+        const userRole = getUserRole();
+        if (userRole === 'STUDENT') { window.location.href = 'dashboard.html'; }
+        buildNavbar('courses');
+
+        // Instructors see slightly different UI
+        if (userRole === 'INSTRUCTOR') {
+            document.getElementById('page-subtitle').textContent = 'Your assigned courses';
+            document.getElementById('create-btn').style.display = 'none'; // Optional refinement: Hide create for instructor if needed
+        }
+
+        let currentPage = 0, totalPages = 0, totalItems = 0;
+        let pendingAction = null;
+
+        // Skeleton rows
+        const skeletonBody = document.getElementById('skeleton-body');
+        for (let i = 0; i < 6; i++) {
+            skeletonBody.innerHTML += `<tr>${[180, 100, 80, 60, 80].map(w =>
+                `<td><div class="skeleton" style="width:${w}px;height:16px;"></div></td>`).join('')}</tr>`;
+        }
+
+        // Load programs for filter
+        async function loadPrograms() {
+            try {
+                const res = await apiCall('/courses/programs');
+                const sel = document.getElementById('program-filter');
+                res.data.forEach(p => {
+                    sel.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                });
+            } catch (e) { }
+        }
+
+        loadPrograms();
+        loadCourses();
+
+        let searchTimeout;
+        document.getElementById('search-input').addEventListener('input', function () {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => { currentPage = 0; loadCourses(); }, 350);
+        });
+        document.getElementById('status-filter').addEventListener('change', () => { currentPage = 0; loadCourses(); });
+        document.getElementById('program-filter').addEventListener('change', () => { currentPage = 0; loadCourses(); });
+
+        function resetFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('status-filter').value = '';
+            document.getElementById('program-filter').value = '';
+            currentPage = 0; loadCourses();
+        }
+
+        async function loadCourses() {
+            const search = document.getElementById('search-input').value.trim();
+            const status = document.getElementById('status-filter').value;
+            const programId = document.getElementById('program-filter').value;
+
+            show(document.getElementById('table-loading'));
+            hide(document.getElementById('table-container'));
+            hide(document.getElementById('empty-state'));
+            document.getElementById('pagination-bar').style.display = 'none';
+
+            const params = new URLSearchParams({
+                page: currentPage, size: 20,
+                ...(search ? { search } : {}), ...(status ? { status } : {}),
+                ...(programId ? { programId } : {})
+            });
+
+            try {
+                const res = await apiCall(`/courses/manage?${params}`);
+                const page = res.data;
+                totalPages = page.totalPages;
+                totalItems = page.totalElements;
+
+                hide(document.getElementById('table-loading'));
+                document.getElementById('course-count').textContent =
+                    `${totalItems} course${totalItems !== 1 ? 's' : ''}`;
+
+                if (!page.content.length) { show(document.getElementById('empty-state')); return; }
+
+                renderCourses(page.content);
+                show(document.getElementById('table-container'));
+                renderPagination(page);
+            } catch (err) {
+                hide(document.getElementById('table-loading'));
+                showToast('Failed to load courses: ' + err.message, 'error');
+            }
+        }
+
+        function renderCourses(courses) {
+            document.getElementById('courses-table-body').innerHTML = courses.map(c => `
+            <tr onclick="window.location.href='course-detail.html?id=${c.id}'" style="cursor: pointer;">
+                <td>
+                    <div style="font-weight:600;color:var(--gray-900);">${c.title}</div>
+                    <div style="font-size:12px;color:var(--gray-500);">${c.courseCode}
+                        ${c.primaryInstructorName ? `· ${c.primaryInstructorName}` : ''}</div>
+                </td>
+                <td style="font-size:13px;color:var(--gray-600);">${c.programName}</td>
+                <td>${getCourseStatusBadge(c.status)}</td>
+                <td style="color:var(--gray-600);">${c.enrolledCount}</td>
+                <td style="font-size:13px;color:var(--gray-600);font-weight:500;">${formatCurrency(c.courseFee)}</td>
+            </tr>`).join('');
+        }
+
+        function renderPagination(page) {
+            if (page.totalPages <= 1) return;
+            const bar = document.getElementById('pagination-bar');
+            const start = page.number * page.size + 1;
+            const end = Math.min(start + page.size - 1, page.totalElements);
+            document.getElementById('pagination-info').textContent = `Showing ${start}–${end} of ${page.totalElements}`;
+            const nums = document.getElementById('page-numbers');
+            nums.innerHTML = '';
+            for (let i = 0; i < page.totalPages; i++) {
+                nums.innerHTML += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i + 1}</button>`;
+            }
+            document.getElementById('prev-btn').disabled = currentPage === 0;
+            document.getElementById('next-btn').disabled = currentPage >= page.totalPages - 1;
+            bar.style.display = 'flex';
+        }
+
+        function goToPage(p) {
+            if (p < 0 || p >= totalPages) return;
+            currentPage = p; loadCourses();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function publishCourse(id, title) {
+            if (!confirm(`Publish "${title}"? Students will be able to see and enroll in this course.`)) return;
+            try {
+                await apiCall(`/courses/${id}/publish`, { method: 'POST' });
+                showToast(`"${title}" is now live!`, 'success');
+                loadCourses();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        function openArchiveModal(id, title) {
+            pendingAction = { id, title };
+            document.getElementById('modal-title').textContent = 'Archive Course';
+            document.getElementById('modal-body').innerHTML =
+                `Archive <strong>${title}</strong>? It will be removed from the catalog. Student records are preserved.`;
+            document.getElementById('confirm-modal').classList.add('open');
+        }
+
+        function closeModal() {
+            document.getElementById('confirm-modal').classList.remove('open');
+            pendingAction = null;
+        }
+
+        async function confirmAction() {
+            if (!pendingAction) return;
+            const btn = document.getElementById('modal-confirm-btn');
+            setLoading(btn, true, 'Archiving...');
+            try {
+                await apiCall(`/courses/${pendingAction.id}/archive`, { method: 'POST' });
+                showToast(`"${pendingAction.title}" archived.`, 'info');
+                closeModal(); loadCourses();
+            } catch (err) { setLoading(btn, false); showToast(err.message, 'error'); }
+        }
+
+        document.getElementById('confirm-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+</body>
+
+</html>
