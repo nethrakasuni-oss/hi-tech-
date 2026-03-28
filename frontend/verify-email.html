@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email — Hi-Tech Institute LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+
+<div class="auth-page">
+
+    <!-- Left Branding Panel -->
+    <div class="auth-brand">
+        <img src="assets/logo.png" alt="Hi-Tech Institute" class="auth-brand-logo">
+        <h2 class="auth-brand-tagline">Almost There!</h2>
+        <p class="auth-brand-sub">One last step — verify your email address to activate your Hi-Tech Institute account and start learning.</p>
+        <ul class="auth-brand-features">
+            <li>Verification links are valid for 24 hours</li>
+            <li>Check your spam folder if not received</li>
+            <li>Request a new link if yours has expired</li>
+        </ul>
+    </div>
+
+    <!-- Right Panel — state machine, all IDs intact -->
+    <div class="auth-card" style="text-align:center;">
+
+        <!-- Loading state -->
+        <div id="state-loading">
+            <div style="font-size:48px;margin-bottom:16px;">⏳</div>
+            <h2>Verifying your email...</h2>
+            <p class="text-muted mt-2">Please wait a moment.</p>
+        </div>
+
+        <!-- Success state -->
+        <div id="state-success" class="hidden">
+            <div style="font-size:64px;margin-bottom:16px;">✅</div>
+            <h2 style="color:var(--success);">Email Verified Successfully!</h2>
+            <p class="text-muted mt-2">Your account is now active. You can now log in.</p>
+            <a href="login.html" class="btn btn-primary btn-lg mt-4" style="margin-top:24px;">Go to Login</a>
+        </div>
+
+        <!-- Expired state -->
+        <div id="state-expired" class="hidden">
+            <div style="font-size:64px;margin-bottom:16px;">⏰</div>
+            <h2 style="color:var(--warning);">Verification Link Expired</h2>
+            <p class="text-muted mt-2">Verification links are valid for <strong>24 hours</strong>.</p>
+            <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                <button class="btn btn-primary" id="resend-btn">Resend Verification Email</button>
+                <a href="login.html" class="btn btn-secondary">Back to Login</a>
+            </div>
+            <div style="margin-top:16px;">
+                <input type="email" id="resend-email" class="form-control" placeholder="Enter your email address" style="max-width:300px;margin:0 auto;">
+            </div>
+        </div>
+
+        <!-- Invalid state -->
+        <div id="state-invalid" class="hidden">
+            <div style="font-size:64px;margin-bottom:16px;">❌</div>
+            <h2 style="color:var(--danger);">Invalid Verification Link</h2>
+            <p class="text-muted mt-2">This link may have already been used or is not valid.</p>
+            <a href="login.html" class="btn btn-secondary mt-4" style="margin-top:24px;">Back to Login</a>
+        </div>
+
+    </div><!-- /auth-card -->
+</div>
+
+<script src="js/common.js"></script>
+<script>
+    (async function() {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+
+        if (!token) {
+            hide(document.getElementById('state-loading'));
+            show(document.getElementById('state-invalid'));
+            return;
+        }
+
+        try {
+            await apiCall(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+            hide(document.getElementById('state-loading'));
+            show(document.getElementById('state-success'));
+        } catch (err) {
+            hide(document.getElementById('state-loading'));
+            if (err.status === 410) { // 410 GONE = expired
+                show(document.getElementById('state-expired'));
+            } else {
+                show(document.getElementById('state-invalid'));
+            }
+        }
+    })();
+
+    document.getElementById('resend-btn')?.addEventListener('click', async function() {
+        const email = document.getElementById('resend-email').value.trim();
+        if (!email) { showToast('Please enter your email address.', 'error'); return; }
+        try {
+            await apiCall(`/auth/resend-verification?email=${encodeURIComponent(email)}`, { method: 'POST' });
+            showToast('Verification email sent! Check your inbox.', 'success');
+        } catch (err) {
+            showToast(err.message || 'Could not resend. Please try again.', 'error');
+        }
+    });
+</script>
+</body>
+</html>
