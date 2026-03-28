@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Hi-Tech Institute LMS</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { primary: '#00adef', dark: '#00529b', grey: '#eaeced' }
+                    },
+                    fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Base styles (shared across all pages) -->
+    <link rel="stylesheet" href="css/common.css">
+    <!-- Shared design system (all pages) -->
+    <link rel="stylesheet" href="css/theme.css">
+    <!-- Dashboard-specific styles -->
+    <link rel="stylesheet" href="css/dashboard.css">
+
+
+</head>
+
+<body>
+
+<!-- ══════════════════════════════════════════
+ NAVBAR  (id="main-navbar" — DO NOT TOUCH)
+ common.js injects brand + links + user menu
+══════════════════════════════════════════ -->
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<!-- ══════════════════════════════════════════
+ MAIN PAGE BODY
+══════════════════════════════════════════ -->
+<main class="container page-content">
+
+    <!-- ── HERO BANNER ── -->
+    <div class="hero-banner">
+        <div class="hero-left">
+            <h1 id="dashboard-title">Welcome back!</h1>
+            <p id="dashboard-subtitle">Your learning ecosystem is thriving today.</p>
+            <div class="hero-btns">
+                <button class="btn-hero">View Reports</button>
+                <button class="btn-hero btn-hero-solid">Daily Brief</button>
+            </div>
+        </div>
+        <div class="hero-right">
+            <img src="assets/image1.png" alt="Dashboard illustration" class="hero-img">
+        </div>
+        <span class="hero-sparkle">✦</span>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+     ADMIN DASHBOARD
+═══════════════════════════════════════ -->
+    <div id="admin-dashboard" class="hidden">
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+
+            <!-- Large card: Total Users -->
+            <div class="kpi-card">
+                <div class="kpi-top">
+                    <div class="kpi-icon">👥</div>
+                    <span class="kpi-badge">+12%</span>
+                </div>
+                <div>
+                    <div class="kpi-label">Total Users</div>
+                    <div class="kpi-value" id="stat-total">—</div>
+                </div>
+            </div>
+
+            <!-- Large card: Total Enrollments -->
+            <div class="kpi-card">
+                <div class="kpi-top">
+                    <div class="kpi-icon">🎟️</div>
+                    <span class="kpi-badge">+8%</span>
+                </div>
+                <div>
+                    <div class="kpi-label">Total Enrollments</div>
+                    <div class="kpi-value" id="stat-enrollments">—</div>
+                </div>
+            </div>
+
+            <!-- Mini 2×2 grid -->
+            <div class="mini-grid">
+                <div class="mini-cell">
+                    <div class="mini-label">
+                        <span class="mini-dot" style="background:#00adef;"></span>
+                        Students
+                    </div>
+                    <div class="mini-value" id="stat-students">—</div>
+                </div>
+                <div class="mini-cell">
+                    <div class="mini-label">
+                        <span class="mini-dot" style="background:#00529b;"></span>
+                        Instructors
+                    </div>
+                    <div class="mini-value" id="stat-instructors">—</div>
+                </div>
+                <div class="mini-cell">
+                    <div class="mini-label">
+                        <span class="mini-dot" style="background:#10b981;"></span>
+                        Active Courses
+                    </div>
+                    <div class="mini-value" id="stat-active-courses">—</div>
+                </div>
+                <div class="mini-cell">
+                    <div class="mini-label">
+                        <span class="mini-dot" style="background:#f59e0b;"></span>
+                        Support Tickets
+                    </div>
+                    <div class="mini-value" id="stat-pending">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden elements — JS still sets these values -->
+        <span id="stat-courses" style="display:none;"></span>
+        <span id="stat-draft-courses" style="display:none;"></span>
+
+        <!-- ── Admin Announcements (read-only summary) ── -->
+        <div class="announcements-section" id="admin-announcements-section">
+            <div class="announcements-header">
+                <h3 class="announcements-heading">📢 Recent Announcements</h3>
+                <a href="manage-announcements.html" class="btn btn-sm btn-outline"
+                   style="display:flex;align-items:center;gap:6px;">Manage All ›</a>
+            </div>
+            <!-- Announcements List (read-only) -->
+            <div id="admin-announcements-list"><p style="color:#9ca3af;font-size:14px;">Loading...</p></div>
+        </div>
+
+        <!-- Bottom Layout: Quick Actions LEFT | Recent Registrations RIGHT -->
+        <div class="bottom-grid">
+
+            <!-- LEFT COLUMN -->
+            <div>
+                <!-- Quick Actions card -->
+                <div class="qa-card">
+                    <div class="qa-header">
+                        <span class="qa-title">Quick Actions</span>
+                        <a href="#" class="qa-customize">Customize</a>
+
+                    </div>
+                    <div class="qa-divider"></div>
+                    <nav>
+                        <a href="admin-users.html" class="qa-item">
+                            <div class="qa-ico">👥</div>
+                            <span class="qa-lbl">Manage Users</span>
+                            <span class="qa-arr">›</span>
+                        </a>
+                        <a href="admin-user-form.html" class="qa-item">
+                            <div class="qa-ico">➕</div>
+                            <span class="qa-lbl">Add New User</span>
+                            <span class="qa-arr">›</span>
+                        </a>
+                        <a href="manage-courses.html" class="qa-item">
+                            <div class="qa-ico">📚</div>
+                            <span class="qa-lbl">Manage Courses</span>
+                            <span class="qa-arr">›</span>
+                        </a>
+                        <a href="course-form.html" class="qa-item">
+                            <div class="qa-ico">📝</div>
+                            <span class="qa-lbl">Create Course</span>
+                            <span class="qa-arr">›</span>
+                        </a>
+                        <a href="finance.html" class="qa-item">
+                            <div class="qa-ico">📊</div>
+                            <span class="qa-lbl">Generate Reports</span>
+                            <span class="qa-arr">›</span>
+                        </a>
+                        <a href="manage-announcements.html" class="qa-item">
+                            <div class="qa-ico">📢</div>
+                            <span class="qa-lbl">Manage Announcements</span>
+                            <span class="qa-arr">›</span>
+                        </a>
+                    </nav>
+                </div>
+
+                <!-- Launch New Session card -->
+                <div class="launch-card">
+                    <div class="launch-rocket">🚀</div>
+                    <div class="launch-title">Launch New Session?</div>
+                    <p class="launch-sub">Schedule a bulk enrollment for the Summer 2024 cohort.</p>
+                    <a href="schedule-form.html" class="btn-launch">Get Started</a>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Recent Registrations -->
+            <div class="reg-card">
+                <div class="reg-header">
+                    <span class="reg-title">Recent Registrations</span>
+                    <div class="reg-actions">
+                        <button class="reg-icon-btn" title="Filter">⇅</button>
+                        <button class="reg-icon-btn" title="Download">⬇</button>
+                    </div>
+                </div>
+                <table class="reg-table">
+                    <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody id="recent-users-body"></tbody>
+                </table>
+                <a href="admin-users.html" class="view-all">View All Registrations →</a>
+            </div>
+        </div>
+    </div><!-- /admin-dashboard -->
+
+    <!-- ═══════════════════════════════════════
+     INSTRUCTOR DASHBOARD
+═══════════════════════════════════════ -->
+    <div id="instructor-dashboard" class="hidden">
+
+        <div class="role-stats-grid">
+            <div class="role-kpi">
+                <div class="role-kpi-label">📚 My Courses</div>
+                <div class="role-kpi-value" id="stat-my-courses">—</div>
+                <div class="role-kpi-sub">Assigned to you</div>
+            </div>
+            <div class="role-kpi">
+                <div class="role-kpi-label">📅 Upcoming Sessions</div>
+                <div class="role-kpi-value" id="stat-upcoming-sessions">—</div>
+                <div class="role-kpi-sub">This week</div>
+            </div>
+            <div class="role-kpi">
+                <div class="role-kpi-label">✏️ Pending Grading</div>
+                <div class="role-kpi-value" id="stat-pending-grading">—</div>
+                <div class="role-kpi-sub">Assignments to grade</div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="content-card-hdr">
+                <span class="content-card-title">📋 My Assigned Courses</span>
+                <div style="display:flex;gap:8px;">
+                    <a href="manage-courses.html" class="btn btn-sm btn-outline">View All</a>
+                    <a href="exams.html" class="btn btn-sm btn-outline">📝 My Exams</a>
+                </div>
+            </div>
+            <div class="table-wrapper" id="instructor-courses-wrapper" style="border:none;">
+                <table class="content-table">
+                    <thead>
+                    <tr>
+                        <th>Course</th>
+                        <th>Status</th>
+                        <th>Students</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody id="instructor-courses-body">
+                    <tr>
+                        <td colspan="4" style="text-align:center;color:#9ca3af;padding:24px;">Loading...</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div><!-- /instructor-dashboard -->
+
+    <!-- ═══════════════════════════════════════
+     STUDENT DASHBOARD
+═══════════════════════════════════════ -->
+    <div id="student-dashboard" class="hidden">
+
+        <div class="role-stats-grid">
+            <div class="role-kpi">
+                <div class="role-kpi-label">📚 Enrolled Courses</div>
+                <div class="role-kpi-value" id="stat-enrolled">—</div>
+                <div class="role-kpi-sub">Your active courses</div>
+            </div>
+            <div class="role-kpi">
+                <div class="role-kpi-label">📝 Upcoming Exams</div>
+                <div class="role-kpi-value" id="stat-upcoming-exams">—</div>
+                <div class="role-kpi-sub">Next 7 days</div>
+            </div>
+            <div class="role-kpi">
+                <div class="role-kpi-label">📅 Next Session</div>
+                <div class="role-kpi-value" id="stat-next-session" style="font-size:18px;">—</div>
+                <div class="role-kpi-sub" id="stat-next-session-sub">Upcoming class</div>
+            </div>
+        </div>
+
+        <!-- ── General Announcements (below KPIs) ── -->
+        <div id="student-general-announcements" class="announcements-section" style="display:none;">
+            <div class="announcements-header">
+                <h3 class="announcements-heading">📢 Announcements</h3>
+            </div>
+            <div id="student-general-ann-list"></div>
+        </div>
+
+        <div class="student-grid">
+            <div class="content-card">
+                <div class="content-card-hdr">
+                    <span class="content-card-title">📚 My Courses</span>
+                    <a href="my-courses.html" class="btn btn-sm btn-outline">View All</a>
+                </div>
+                <div id="student-courses-list">
+                    <p style="color:#9ca3af;font-size:14px;">Loading your courses...</p>
+                </div>
+            </div>
+            <div class="content-card">
+                <div class="content-card-hdr">
+                    <span class="content-card-title">🔍 Browse Courses</span>
+                    <a href="course-catalog.html" class="btn btn-sm btn-primary">Browse All</a>
+                </div>
+                <p style="color:#6b7280;font-size:14px;">Discover new courses and expand your skills.</p>
+            </div>
+        </div>
+    </div><!-- /student-dashboard -->
+
+    <!-- ═══════════════════════════════════════
+     SUPPORT STAFF DASHBOARD
+═══════════════════════════════════════ -->
+    <div id="supportstaff-dashboard" class="hidden">
+
+        <div class="role-stats-grid">
+            <div class="role-kpi">
+                <div class="role-kpi-label">🎫 Open Tickets</div>
+                <div class="role-kpi-value" id="stat-open-tickets">—</div>
+                <div class="role-kpi-sub">Awaiting response</div>
+            </div>
+            <div class="role-kpi">
+                <div class="role-kpi-label">⚡ In Progress</div>
+                <div class="role-kpi-value" id="stat-inprogress-tickets">—</div>
+                <div class="role-kpi-sub">Currently being handled</div>
+            </div>
+            <div class="role-kpi">
+                <div class="role-kpi-label">✅ Resolved Today</div>
+                <div class="role-kpi-value" id="stat-resolved-today">—</div>
+                <div class="role-kpi-sub">Tickets closed today</div>
+            </div>
+        </div>
+
+        <div class="content-card" style="margin-bottom:20px;">
+            <div class="content-card-hdr">
+                <span class="content-card-title">⚡ Quick Actions</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                <a href="support-staff-dashboard.html" class="btn btn-primary">🎫 Manage Tickets</a>
+                <a href="support-knowledge-base-manage.html" class="btn btn-outline">📚 Knowledge Base</a>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="content-card-hdr">
+                <span class="content-card-title">🕐 Recent Tickets</span>
+                <a href="support-staff-dashboard.html" class="btn btn-sm btn-outline">View All</a>
+            </div>
+            <div style="border:none;" class="table-wrapper">
+                <table class="content-table">
+                    <thead>
+                    <tr>
+                        <th>Ticket ID</th>
+                        <th>Student</th>
+                        <th>Subject</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody id="recent-tickets-body">
+                    <tr>
+                        <td colspan="5" style="text-align:center;padding:24px;color:#9ca3af;">Loading...</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div><!-- /supportstaff-dashboard -->
+
+</main>
+
+<!-- ══════════════════════════════════════════
+ FOOTER
+══════════════════════════════════════════ -->
+<footer class="site-footer">
+    <div class="container">
+        <span class="footer-copy">© 2023 HI TECH INSTITUTE. All rights reserved.</span>
+        <div class="footer-links">
+            <a href="#">System Health</a>
+            <a href="#">Data Privacy</a>
+            <a href="#">Terms of Service</a>
+        </div>
+    </div>
+</footer>
+
+<!-- ══════════════════════════════════════════
+ SCRIPTS — ZERO LOGIC CHANGES
+══════════════════════════════════════════ -->
+<script src="js/common.js"></script>
+<script>
+    if (!requireAuth()) { /* handled */ }
+    buildNavbar('dashboard');
+
+    const user = getCurrentUser();
+    const role = user?.role;
+
+    document.getElementById('dashboard-title').textContent = `Welcome back, ${user?.fullName?.split(' ')[0]}!`;
+    document.getElementById('dashboard-subtitle').textContent =
+        role === 'ADMIN' ? 'System overview and management.' :
+            role === 'INSTRUCTOR' ? 'Your teaching overview.' : 'Your learning overview.';
+
+    if (role === 'ADMIN') {
+        show(document.getElementById('admin-dashboard'));
+        loadAdminStats();
+        loadAdminCourseStats();
+        loadRecentUsers();
+    } else if (role === 'INSTRUCTOR') {
+        show(document.getElementById('instructor-dashboard'));
+        loadInstructorCourses();
+    } else if (role === 'SUPPORT_STAFF') {
+        show(document.getElementById('supportstaff-dashboard'));
+        loadSupportStaffStats();
+    } else {
+        show(document.getElementById('student-dashboard'));
+        loadStudentCourses();
+    }
+
+    // ---- Admin: user KPIs ----
+    async function loadAdminStats() {
+        try {
+            const res = await apiCall('/admin/dashboard/stats');
+            const s = res.data;
+            document.getElementById('stat-total').textContent = s.totalUsers;
+            document.getElementById('stat-students').textContent = s.totalStudents;
+            document.getElementById('stat-instructors').textContent = s.totalInstructors;
+            document.getElementById('stat-pending').textContent = s.pendingVerification;
+        } catch (err) { console.error('Stats error:', err.message); }
+    }
+
+    // ---- Admin: course KPIs ----
+    async function loadAdminCourseStats() {
+        try {
+            const res = await apiCall('/admin/dashboard/course-stats');
+            const s = res.data;
+            document.getElementById('stat-courses').textContent = s.totalCourses;
+            document.getElementById('stat-active-courses').textContent = s.activeCourses;
+            document.getElementById('stat-draft-courses').textContent = s.draftCourses;
+            document.getElementById('stat-enrollments').textContent = s.totalEnrollments;
+        } catch (err) { console.error('Course stats error:', err.message); }
+    }
+
+    // ---- Admin: recent users ----
+    async function loadRecentUsers() {
+        try {
+            const res = await apiCall('/admin/users?page=0&size=5');
+            const tbody = document.getElementById('recent-users-body');
+            const users = res.data.content || [];
+            if (!users.length) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:24px;">No users yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>
+                        <div class="table-avatar">
+                            <div class="user-avatar" style="font-size:12px;">${getInitials(u.fullName)}</div>
+                            <div>
+                                <div class="table-avatar-name">${u.fullName}</div>
+                                <div class="table-avatar-email">${u.email}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${getRoleBadge(u.role)}</td>
+                    <td>${getStatusBadge(u.accountStatus)}</td>
+                    <td style="color:#9ca3af;font-size:13px;">${formatDate(u.createdAt)}</td>
+                    <td><span class="tdot">⋮</span></td>
+                </tr>`).join('');
+        } catch (err) { console.error('Recent users error:', err.message); }
+    }
+
+    // ---- Instructor: assigned courses ----
+    async function loadInstructorCourses() {
+        try {
+            const res = await apiCall('/courses/manage?page=0&size=5');
+            const courses = res.data.content || [];
+            const tbody = document.getElementById('instructor-courses-body');
+            document.getElementById('stat-my-courses').textContent = res.data.totalElements || 0;
+
+            if (!courses.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:24px;">No courses assigned yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = courses.map(c => `
+                <tr>
+                    <td>
+                        <div style="font-weight:500;">${c.title}</div>
+                        <div style="font-size:12px;color:#9ca3af;">${c.courseCode}</div>
+                    </td>
+                    <td>${getCourseStatusBadge(c.status)}</td>
+                    <td style="color:#6b7280;">${c.enrolledCount}</td>
+                    <td>
+                        <a href="course-detail.html?id=${c.id}" class="btn btn-sm btn-secondary">View</a>
+                        <a href="course-content.html?id=${c.id}" class="btn btn-sm btn-outline" style="margin-left:4px;">Content</a>
+                    </td>
+                </tr>`).join('');
+        } catch (err) { console.error('Instructor courses error:', err.message); }
+
+        // Load upcoming sessions count for instructor
+        try {
+            const statsResp = await apiCall('/schedule/dashboard-stats');
+            document.getElementById('stat-upcoming-sessions').textContent = statsResp.data || 0;
+        } catch (e) { }
+
+
+        // Load pending grading count from exam management
+        try {
+            const examResp = await apiCall('/exams/manage?page=0&size=100');
+            const exams = examResp.data.content || [];
+            const pending = exams.reduce((sum, e) => sum + (e.pendingGradeCount || 0), 0);
+            const el = document.getElementById('stat-pending-grading');
+            if (el) el.textContent = pending;
+        } catch (e) { }
+    }
+
+    // ---- Student: enrolled courses ----
+    async function loadStudentCourses() {
+        let courseList = [];
+        try {
+            const res = await apiCall('/courses/my');
+            courseList = res.data || [];
+            document.getElementById('stat-enrolled').textContent = courseList.length;
+            const container = document.getElementById('student-courses-list');
+
+            if (!courseList.length) {
+                container.innerHTML = `<p class="text-muted">You have no enrolled courses yet.
+                    <a href="course-catalog.html">Browse courses →</a></p>`;
+            } else {
+                container.innerHTML = courseList.slice(0, 4).map(c => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);">
+                        <div>
+                            <div style="font-weight:500;font-size:14px;">${c.title}</div>
+                            <div style="font-size:12px;color:var(--gray-500);">${c.programName || ''}</div>
+                        </div>
+                        <a href="course-detail.html?id=${c.id}" class="btn btn-sm btn-outline">Open</a>
+                    </div>`).join('') + (courseList.length > 4
+                    ? `<p style="text-align:center;margin-top:12px;"><a href="my-courses.html">View all ${courseList.length} courses →</a></p>`
+                    : '');
+            }
+        } catch (err) { console.error('Student courses error:', err.message); }
+
+        // Load upcoming sessions count for student
+        try {
+            const schedResp = await apiCall('/schedule/upcoming?limit=1');
+            const sessions = schedResp.data || [];
+            if (sessions.length) {
+                const next = sessions[0];
+                document.getElementById('stat-next-session').textContent =
+                    next.sessionDate + ' ' + next.startTime.substring(0, 5);
+                document.getElementById('stat-next-session-sub').textContent =
+                    next.courseCode + ' — ' + next.title;
+            } else {
+                document.getElementById('stat-next-session').textContent = 'None';
+            }
+        } catch (e) { }
+
+        // Load upcoming exams count for student
+        try {
+            const examResp = await apiCall('/exams');
+            const exams = examResp.data || [];
+            const upcoming = exams.filter(e =>
+                e.studentAttemptStatus === 'NOT_STARTED' && e.windowStatus === 'OPEN'
+            ).length;
+            const el = document.getElementById('stat-upcoming-exams');
+            if (el) el.textContent = upcoming;
+        } catch (e) { }
+
+        // Load general announcements for students
+        loadStudentGeneralAnnouncements();
+    }
+
+    // ---- Student: general system-wide announcements ----
+    async function loadStudentGeneralAnnouncements() {
+        try {
+            const res = await apiCall('/announcements/system');
+            const announcements = res.data || [];
+            const section = document.getElementById('student-general-announcements');
+            const list = document.getElementById('student-general-ann-list');
+            if (!announcements.length) { section.style.display = 'none'; return; }
+            section.style.display = 'block';
+            list.innerHTML = announcements.map(a => renderAnnouncementCard(a, false)).join('');
+        } catch (e) { console.error('General announcements error:', e); }
+    }
+
+    async function loadSupportStaffStats() {
+        try {
+            const res = await apiCall('/support/tickets/stats');
+            const s = res.data;
+            document.getElementById('stat-open-tickets').textContent = s.openCount || 0;
+            document.getElementById('stat-inprogress-tickets').textContent = s.inProgressCount || 0;
+            document.getElementById('stat-resolved-today').textContent = s.resolvedTodayCount || 0;
+        } catch (e) { console.error(e); }
+
+        try {
+            const res = await apiCall('/support/tickets?status=OPEN&page=0&size=5');
+            const tbody = document.getElementById('recent-tickets-body');
+            const tickets = res.data.content || [];
+            if (!tickets.length) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:24px;">No open tickets.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = tickets.map(t => `<tr>
+            <td><code style="font-size:12px;background:var(--gray-100);padding:2px 6px;border-radius:4px;">${t.ticketNumber}</code></td>
+            <td>${t.studentName}</td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.subject}</td>
+            <td>${getPriorityBadge(t.priority)}</td>
+            <td>${getTicketStatusBadge(t.status)}</td>
+        </tr>`).join('');
+        } catch (e) { }
+    }
+
+    // ════════════════════════════════════════════════
+    // ANNOUNCEMENTS — Shared Helpers
+    // ════════════════════════════════════════════════
+
+    /** Render a single announcement card (read-only or with delete button). */
+    function renderAnnouncementCard(a, canDelete) {
+        const typeLabel = a.type === 'SYSTEM'
+            ? '<span class="announcement-badge badge-system">📣 System-wide</span>'
+            : `<span class="announcement-badge badge-course">${a.courseCode || 'Course'}</span>`;
+        const deleteBtn = canDelete
+            ? `<button class="ann-delete-btn" onclick="deleteAnnouncement(${a.id}, this)" title="Delete">🗑</button>`
+            : '';
+        return `
+            <div class="announcement-card" id="ann-card-${a.id}">
+                <div class="announcement-card-top">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        ${typeLabel}
+                        <span class="announcement-title">${escapeHtml(a.title)}</span>
+                    </div>
+                    ${deleteBtn}
+                </div>
+                <div class="announcement-body">${escapeHtml(a.message)}</div>
+                <div class="announcement-meta">Posted by <strong>${escapeHtml(a.authorName)}</strong> · ${formatDateTime(a.createdAt)}</div>
+            </div>`;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ---- Admin Announcements (dashboard: read-only summary, limit 5) ----
+    async function loadAdminAnnouncements() {
+        try {
+            const res = await apiCall('/announcements/manage');
+            const list = document.getElementById('admin-announcements-list');
+            const announcements = (res.data || []).slice(0, 5); // show latest 5 on dashboard
+            if (!announcements.length) {
+                list.innerHTML = '<p class="ann-empty">No announcements yet. <a href="manage-announcements.html">Post one →</a></p>';
+                return;
+            }
+            list.innerHTML = announcements.map(a => renderAnnouncementCard(a, false)).join('');
+        } catch (e) { console.error('Admin announcements error:', e); }
+    }
+
+    // ---- Instructor Announcements ----
+    let _instructorCourses = [];
+
+    async function loadInstructorAnnouncements() {
+        // Populate course dropdown with their assigned courses
+        try {
+            const cr = await apiCall('/courses/manage?page=0&size=200');
+            _instructorCourses = cr.data.content || [];
+            const select = document.getElementById('instructor-ann-course');
+            if (select) {
+                select.innerHTML = '<option value="">Select a course...</option>' +
+                    _instructorCourses.map(c => `<option value="${c.id}">${c.title} (${c.courseCode})</option>`).join('');
+            }
+        } catch (e) { }
+
+        await refreshInstructorAnnouncementList();
+    }
+
+    async function refreshInstructorAnnouncementList() {
+        try {
+            const res = await apiCall('/announcements/manage');
+            const list = document.getElementById('instructor-announcements-list');
+            const announcements = res.data || [];
+            if (!announcements.length) {
+                list.innerHTML = '<p class="ann-empty">No announcements posted yet.</p>';
+                return;
+            }
+            list.innerHTML = announcements.map(a => renderAnnouncementCard(a, true)).join('');
+        } catch (e) { console.error('Instructor announcements error:', e); }
+    }
+
+    function toggleInstructorPostForm() {
+        const form = document.getElementById('instructor-post-form');
+        const icon = document.getElementById('instructor-post-btn-icon');
+        const isHidden = form.classList.contains('hidden');
+        form.classList.toggle('hidden', !isHidden);
+        icon.textContent = isHidden ? '✕' : '+';
+    }
+
+    async function submitInstructorAnnouncement() {
+        const title = document.getElementById('instructor-ann-title').value.trim();
+        const message = document.getElementById('instructor-ann-message').value.trim();
+        const courseId = document.getElementById('instructor-ann-course').value;
+        if (!title || !message) { showToast('Title and message are required.', 'error'); return; }
+        if (!courseId) { showToast('Please select a course.', 'error'); return; }
+        const btn = document.getElementById('instructor-ann-submit-btn');
+        setLoading(btn, true, 'Posting...');
+        try {
+            await apiCall('/announcements', { method: 'POST', body: { title, message, courseId: Number(courseId) } });
+            showToast('Announcement posted!', 'success');
+            document.getElementById('instructor-ann-title').value = '';
+            document.getElementById('instructor-ann-message').value = '';
+            document.getElementById('instructor-ann-course').value = '';
+            toggleInstructorPostForm();
+            await refreshInstructorAnnouncementList();
+        } catch (e) { showToast(e.message || 'Failed to post.', 'error'); }
+        finally { setLoading(btn, false); }
+    }
+
+    // ---- Shared delete ----
+    async function deleteAnnouncement(id, btn) {
+        if (!confirm('Delete this announcement? This cannot be undone.')) return;
+        try {
+            await apiCall(`/announcements/${id}`, { method: 'DELETE' });
+            const card = document.getElementById(`ann-card-${id}`);
+            if (card) { card.style.opacity = '0'; setTimeout(() => card.remove(), 300); }
+            showToast('Announcement deleted.', 'success');
+        } catch (e) { showToast(e.message || 'Failed to delete.', 'error'); }
+    }
+
+    // ---- Wire up role-based announcement loading ----
+    if (role === 'ADMIN') loadAdminAnnouncements();
+    if (role === 'INSTRUCTOR') loadInstructorAnnouncements();
+</script>
+</body>
+
+</html>
