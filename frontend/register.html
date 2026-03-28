@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account — Hi-Tech Institute LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+
+<div class="auth-page">
+
+    <!-- Card wrapper -->
+    <div class="auth-card-wrap">
+
+        <!-- Floating card -->
+        <div class="auth-container">
+
+            <!-- Left: Form Panel -->
+            <div class="auth-form-panel">
+
+                <!-- Logo at top of form panel -->
+                <img src="assets/logo.png" alt="Hi-Tech Institute" class="auth-card-logo">
+
+                <!-- Error Banner -->
+                <div class="alert alert-danger hidden" id="error-banner" style="max-width:420px;margin-bottom:20px;">
+                    <span class="alert-icon">⚠️</span>
+                    <span id="error-text"></span>
+                </div>
+
+                <!-- Success State -->
+                <div class="hidden" id="success-state" style="text-align:center;padding:20px 0;max-width:420px;">
+                    <div style="font-size:56px;margin-bottom:16px;">📧</div>
+                    <h3 style="color:var(--success);margin-bottom:8px;">Check Your Email!</h3>
+                    <p style="color:var(--gray-600);">
+                        We've sent a verification link to <strong id="sent-email"></strong>.<br>
+                        The link expires in <strong>24 hours</strong>.
+                    </p>
+                    <div style="margin-top:24px;">
+                        <a href="login.html" class="btn btn-primary">Back to Login</a>
+                    </div>
+                    <p class="mt-4" style="font-size:13px;color:var(--text-muted);">
+                        Didn't receive it? <a href="#" id="resend-link" style="color:var(--brand-primary);font-weight:600;">Resend verification email</a>
+                    </p>
+                </div>
+
+                <!-- Registration Form -->
+                <form id="register-form" novalidate style="width:100%;">
+
+                    <h2 class="auth-title">Create Account</h2>
+                    <p class="auth-subtitle">Join our community of future leaders today.</p>
+
+                    <!-- Full Name -->
+                    <div class="form-group">
+                        <label class="form-label" for="fullName">Full Name</label>
+                        <div class="auth-input-wrap">
+                            <span class="auth-input-icon">👤</span>
+                            <input type="text" id="fullName" name="fullName" class="form-control"
+                                   placeholder="John Doe" autocomplete="name">
+                        </div>
+                        <div class="form-error" id="fullName-error"></div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email Address</label>
+                        <div class="auth-input-wrap">
+                            <span class="auth-input-icon">✉️</span>
+                            <input type="email" id="email" name="email" class="form-control"
+                                   placeholder="name@example.com" autocomplete="email">
+                        </div>
+                        <div class="form-error" id="email-error"></div>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password</label>
+                        <div class="auth-input-wrap">
+                            <span class="auth-input-icon">🔒</span>
+                            <input type="password" id="password" name="password" class="form-control"
+                                   placeholder="••••••••" autocomplete="new-password">
+                            <button type="button" class="input-toggle" id="toggle-pwd">👁</button>
+                        </div>
+                        <div class="strength-bar mt-2">
+                            <div class="strength-bar-fill" id="strength-fill"></div>
+                        </div>
+                        <div class="strength-label text-sm" id="strength-label"></div>
+                        <div class="form-error" id="password-error"></div>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div class="form-group">
+                        <label class="form-label" for="confirmPassword">Confirm Password</label>
+                        <div class="auth-input-wrap">
+                            <span class="auth-input-icon">🛡️</span>
+                            <input type="password" id="confirmPassword" name="confirmPassword"
+                                   class="form-control" placeholder="••••••••" autocomplete="new-password">
+                            <button type="button" class="input-toggle" id="toggle-confirm-pwd">👁</button>
+                        </div>
+                        <div class="form-error" id="confirmPassword-error"></div>
+                    </div>
+
+                    <!-- Phone (optional — hidden to keep form clean like reference) -->
+                    <div class="form-group" style="display:none;">
+                        <label class="form-label" for="phoneNumber">Phone Number <span style="color:var(--text-muted);font-weight:400;">(Optional)</span></label>
+                        <div class="auth-input-wrap">
+                            <span class="auth-input-icon">📱</span>
+                            <input type="tel" id="phoneNumber" name="phoneNumber" class="form-control"
+                                   placeholder="07XXXXXXXX" autocomplete="tel">
+                        </div>
+                        <div class="form-hint">Format: 07XXXXXXXX (10 digits)</div>
+                        <div class="form-error" id="phoneNumber-error"></div>
+                    </div>
+
+                    <!-- Terms -->
+                    <div class="form-group" style="display:none;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="terms" name="terms" checked>
+                            <label for="terms">
+                                I agree to the <a href="#" target="_blank">Terms of Service</a>
+                                and <a href="#" target="_blank">Privacy Policy</a>
+                            </label>
+                        </div>
+                        <div class="form-error" id="terms-error"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="register-btn">
+                        Sign Up
+                    </button>
+
+                </form>
+
+                <div class="auth-bottom-link" style="margin-top:20px;">
+                    Already have an account? <a href="login.html">Sign In</a>
+                </div>
+
+            </div><!-- /auth-form-panel -->
+
+            <!-- Right: Photo Panel -->
+            <div class="auth-photo-panel">
+                <img src="assets/image3.png" alt="Hi-Tech Institute Campus">
+            </div>
+
+        </div><!-- /auth-container -->
+
+    </div><!-- /auth-card-wrap -->
+
+    <!-- Page Footer -->
+    <div class="auth-page-footer">
+        <span>© 2024 HI TECH INSTITUTE</span>
+        <div class="auth-page-footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Help Center</a>
+        </div>
+    </div>
+
+</div><!-- /auth-page -->
+
+<script src="js/common.js"></script>
+<script>
+    redirectIfLoggedIn();
+
+    const form        = document.getElementById('register-form');
+    const registerBtn = document.getElementById('register-btn');
+    const errBanner   = document.getElementById('error-banner');
+    // auto-accept terms since checkbox is hidden
+    const termsCheck  = document.getElementById('terms');
+    let lastEmail = '';
+
+    // Password show/hide toggles
+    document.getElementById('toggle-pwd').addEventListener('click', function() {
+        const f = document.getElementById('password');
+        f.type = f.type === 'password' ? 'text' : 'password';
+        this.textContent = f.type === 'password' ? '👁' : '🙈';
+    });
+    document.getElementById('toggle-confirm-pwd').addEventListener('click', function() {
+        const f = document.getElementById('confirmPassword');
+        f.type = f.type === 'password' ? 'text' : 'password';
+        this.textContent = f.type === 'password' ? '👁' : '🙈';
+    });
+
+    // Real-time password strength
+    document.getElementById('password').addEventListener('input', function() {
+        clearFieldError(this);
+        updatePasswordStrength(
+            this.value,
+            document.getElementById('strength-fill'),
+            document.getElementById('strength-label')
+        );
+    });
+
+    // Real-time confirm match
+    document.getElementById('confirmPassword').addEventListener('input', function() {
+        clearFieldError(this);
+        if (this.value && this.value !== document.getElementById('password').value) {
+            showFieldError(this, 'Passwords do not match');
+        }
+    });
+
+    ['fullName','email','phoneNumber'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', function() {
+            clearFieldError(this); hide(errBanner);
+        });
+    });
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        clearAllErrors(form);
+        hide(errBanner);
+
+        const fullName        = document.getElementById('fullName').value.trim();
+        const email           = document.getElementById('email').value.trim();
+        const password        = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const phoneNumber     = document.getElementById('phoneNumber').value.trim();
+
+        let valid = true;
+        if (!fullName) { showFieldError(document.getElementById('fullName'), 'Full name is required'); valid = false; }
+        if (!email)    { showFieldError(document.getElementById('email'), 'Email is required'); valid = false; }
+        if (!password) { showFieldError(document.getElementById('password'), 'Password is required'); valid = false; }
+        if (password !== confirmPassword) {
+            showFieldError(document.getElementById('confirmPassword'), 'Passwords do not match'); valid = false;
+        }
+        if (phoneNumber && !/^(07\d{8}|7\d{8})$/.test(phoneNumber)) {
+            showFieldError(document.getElementById('phoneNumber'), 'Phone must start with 07 (10 digits) or 7 (9 digits)'); valid = false;
+        }
+        if (!valid) return;
+
+        lastEmail = email;
+        setLoading(registerBtn, true, 'Creating account...');
+
+        try {
+            await apiCall('/auth/register', {
+                method: 'POST',
+                body: { fullName, email, password, confirmPassword, phoneNumber: phoneNumber || null }
+            });
+            document.getElementById('sent-email').textContent = email;
+            hide(form);
+            show(document.getElementById('success-state'));
+        } catch (err) {
+            setLoading(registerBtn, false);
+            if (err.data && err.data.data) showApiErrors(form, err.data.data);
+            document.getElementById('error-text').textContent = err.message || 'Registration failed. Please try again.';
+            show(errBanner);
+        }
+    });
+
+    document.getElementById('resend-link')?.addEventListener('click', async function(e) {
+        e.preventDefault();
+        try {
+            await apiCall(`/auth/resend-verification?email=${encodeURIComponent(lastEmail)}`, { method: 'POST' });
+            showToast('Verification email resent!', 'success');
+        } catch (err) {
+            showToast(err.message || 'Could not resend. Please try again.', 'error');
+        }
+    });
+</script>
+</body>
+</html>
