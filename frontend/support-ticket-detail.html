@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Detail — Hi-Tech LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        .message-bubble { padding:16px 20px; border-radius:12px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.02); }
+        .message-bubble.student { background:#eff6ff; border-left:4px solid var(--brand-primary); }
+        .message-bubble.staff { background:#f0fdf4; border-left:4px solid var(--success); }
+        .message-bubble.internal { background:#fef9c3; border-left:4px solid var(--warning); }
+        .timeline { display:flex; gap:8px; align-items:center; margin-bottom:32px; overflow-x:auto; padding-bottom:8px; }
+        .tl-step { display:flex; flex-direction:column; align-items:center; min-width:90px; }
+        .tl-circle { width:32px; height:32px; border-radius:50%; border:3px solid var(--border-light); background:var(--card-bg); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--text-muted); transition:all 0.2s;}
+        .tl-circle.done { background:var(--success); border-color:var(--success); color:#fff; }
+        .tl-circle.current { background:var(--brand-primary); border-color:var(--brand-primary); color:#fff; }
+        .tl-label { font-size:11px; font-weight:600; color:var(--text-muted); margin-top:8px; text-align:center; }
+        .tl-line { flex:1; height:4px; background:var(--border-light); min-width:24px; border-radius:2px; }
+        .tl-line.done { background:var(--success); }
+    </style>
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<main class="container page-content" style="max-width:900px;">
+    <div class="breadcrumb" style="margin-bottom:24px;">
+        <a href="support.html">Help Center</a> <span class="breadcrumb-sep">/</span> <a href="support-my-tickets.html">My Tickets</a> <span class="breadcrumb-sep">/</span> <span style="font-weight:600;color:var(--text-primary);" id="ticket-num">Ticket</span>
+    </div>
+
+    <div id="loading-state" class="empty-state" style="padding:64px 0;"><p class="empty-state-title">Loading Ticket…</p></div>
+
+    <div id="ticket-content" class="hidden">
+        <div class="content-card" style="padding:40px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:24px;">
+                <div>
+                    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+                        <code id="t-number" style="background:var(--page-bg);padding:4px 8px;border-radius:6px;font-size:14px;font-weight:700;"></code>
+                        <span id="t-status"></span>
+                        <span id="t-priority"></span>
+                        <span id="t-category" style="background:var(--page-bg);color:var(--text-secondary);padding:4px 8px;border-radius:6px;font-size:13px;font-weight:600;"></span>
+                    </div>
+                    <h2 id="t-subject" style="font-size:24px;font-weight:800;color:var(--text-primary);margin-bottom:8px;"></h2>
+                    <div style="font-size:13px;font-weight:600;color:var(--text-muted);" id="t-meta"></div>
+                </div>
+                <div id="t-actions" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+            </div>
+
+            <!-- Status timeline -->
+            <div class="timeline" id="status-timeline"></div>
+
+            <!-- Description -->
+            <div style="background:var(--page-bg);border-radius:12px;padding:20px;margin-bottom:32px;border:1px solid var(--border-light);">
+                <div style="font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Original Description</div>
+                <div id="t-description" style="font-size:15px;color:var(--text-body);line-height:1.7;white-space:pre-wrap;"></div>
+            </div>
+
+            <!-- Message thread -->
+            <div id="message-thread" style="margin-bottom:32px;"></div>
+
+            <!-- Reply box -->
+            <div id="reply-section" style="border-top:2px solid var(--border-light);padding-top:32px;">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label class="form-label" style="font-size:16px;font-weight:700;">Add a Reply</label>
+                    <textarea id="reply-body" class="form-control" rows="5" placeholder="Type your message…" style="resize:vertical;"></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="sendReply()" style="padding:10px 24px;">Send Reply</button>
+            </div>
+
+            <!-- Resolution note -->
+            <div id="resolution-section" class="hidden" style="margin-top:32px;background:#f0fdf4;border:2px solid #bbf7d0;border-radius:12px;padding:24px;">
+                <div style="font-size:13px;font-weight:800;color:var(--success);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px;"><span>✅</span> Resolution</div>
+                <div id="t-resolution" style="font-size:15px;color:var(--text-body);line-height:1.6;"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="site-footer" style="margin-top:80px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    buildNavbar('support');
+
+    const params = new URLSearchParams(window.location.search);
+    const ticketId = params.get('id');
+    if (!ticketId) window.location.href = 'support-my-tickets.html';
+
+    let ticket = null;
+
+    loadTicket();
+
+    async function loadTicket() {
+        try {
+            const res = await apiCall(`/support/tickets/${ticketId}`);
+            ticket = res.data;
+            renderTicket(ticket);
+            hide(document.getElementById('loading-state'));
+            show(document.getElementById('ticket-content'));
+        } catch(err) {
+            document.getElementById('loading-state').innerHTML =
+                `<p class="empty-state-title" style="color:var(--danger)">Failed to load ticket: ${err.message}</p>`;
+        }
+    }
+
+    function renderTicket(t) {
+        document.getElementById('ticket-num').textContent = t.ticketNumber;
+        document.getElementById('t-number').textContent = t.ticketNumber;
+        document.getElementById('t-status').innerHTML = getTicketStatusBadge(t.status);
+        document.getElementById('t-priority').innerHTML = getPriorityBadge(t.priority);
+        document.getElementById('t-category').textContent = t.category;
+        document.getElementById('t-subject').textContent = t.subject;
+        document.getElementById('t-meta').textContent =
+            `Submitted ${formatDate(t.createdAt)} · Last updated ${formatDate(t.updatedAt)}` +
+            (t.assignedToName ? ` · Assigned to: ${t.assignedToName}` : '');
+        document.getElementById('t-description').textContent = t.description;
+
+        // Timeline
+        const statuses = ['OPEN','IN_PROGRESS','RESOLVED','CLOSED'];
+        const labels   = ['Opened','In Progress','Resolved','Closed'];
+        const curIdx   = statuses.indexOf(t.status);
+        let html = '';
+        statuses.forEach((s,i) => {
+            if (i>0) html += `<div class="tl-line ${i<=curIdx?'done':''}"></div>`;
+            const cls = i<curIdx?'done':i===curIdx?'current':'';
+            html += `<div class="tl-step"><div class="tl-circle ${cls}">${i<curIdx?'✓':i+1}</div><div class="tl-label">${labels[i]}</div></div>`;
+        });
+        document.getElementById('status-timeline').innerHTML = html;
+
+        // Messages
+        const thread = document.getElementById('message-thread');
+        const msgs = t.messages || [];
+        thread.innerHTML = msgs.length === 0
+            ? '<p class="text-muted" style="font-size:14px;font-style:italic;">No messages yet in this thread.</p>'
+            : msgs.map(m => {
+                const isStudent = m.senderRole === 'STUDENT';
+                const cls = m.internal ? 'internal' : isStudent ? 'student' : 'staff';
+                return `<div class="message-bubble ${cls}">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                        <span style="font-weight:700;font-size:14px;color:var(--text-primary);">${m.senderName}${m.internal?' <span style="background:#fef08a;color:#854d0e;font-size:11px;padding:2px 6px;border-radius:4px;margin-left:4px;">Internal Only</span>':''}</span>
+                        <span style="font-size:12px;font-weight:600;color:var(--text-muted);">${formatDate(m.createdAt)}</span>
+                    </div>
+                    <div style="font-size:14px;color:var(--text-body);line-height:1.6;white-space:pre-wrap;">${m.body}</div>
+                </div>`;
+            }).join('');
+
+        // Resolution
+        if (t.resolutionNote) {
+            document.getElementById('t-resolution').textContent = t.resolutionNote;
+            show(document.getElementById('resolution-section'));
+        }
+
+        // Actions
+        const actions = document.getElementById('t-actions');
+        if (t.status === 'RESOLVED' && getUserRole() === 'STUDENT') {
+            actions.innerHTML = `<button class="btn btn-secondary outline" onclick="reopen()">↩ Reopen Ticket</button>`;
+        }
+
+        // Hide reply if closed
+        if (t.status === 'CLOSED') {
+            document.getElementById('reply-section').innerHTML =
+                '<div style="background:var(--page-bg);padding:20px;border-radius:8px;text-align:center;"><p class="text-muted text-sm" style="font-size:14px;font-weight:500;">This ticket is closed. <a href="support-new-ticket.html" style="font-weight:600;color:var(--brand-primary);text-decoration:none;">Submit a new ticket</a> if you need further help.</p></div>';
+        }
+    }
+
+    async function sendReply() {
+        const body = document.getElementById('reply-body').value.trim();
+        if (!body) { showToast('Please enter a message.', 'error'); return; }
+        try {
+            await apiCall(`/support/tickets/${ticketId}/messages`, { method: 'POST', body: { body } });
+            document.getElementById('reply-body').value = '';
+            showToast('Reply sent!', 'success');
+            loadTicket();
+        } catch(err) { showToast(err.message, 'error'); }
+    }
+
+    async function reopen() {
+        if (!confirm('Reopen this ticket?')) return;
+        try {
+            await apiCall(`/support/tickets/${ticketId}/reopen`, { method: 'POST' });
+            showToast('Ticket reopened.', 'success');
+            loadTicket();
+        } catch(err) { showToast(err.message, 'error'); }
+    }
+</script>
+</body>
+</html>

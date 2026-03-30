@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Knowledge Base — Hi-Tech LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<!-- Article Editor Modal -->
+<div class="modal-overlay" id="editor-modal" style="align-items:flex-start;padding:40px 24px;overflow-y:auto;">
+    <div class="modal" style="max-width:860px;width:100%;margin:auto;">
+        <h3 class="modal-title" style="font-size:24px;font-weight:800;color:var(--text-primary);margin-bottom:24px;" id="editor-title">Create Article</h3>
+        <div class="form-group">
+            <label class="form-label">Title *</label>
+            <input type="text" id="e-title" class="form-control" placeholder="Article title (unique within category)">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Category *</label>
+                <select id="e-category" class="form-control">
+                    <option value="">Select category…</option>
+                    <option value="ENROLLMENT">Enrollment</option>
+                    <option value="FINANCE">Finance</option>
+                    <option value="ACADEMIC">Academic</option>
+                    <option value="TECHNICAL">Technical</option>
+                    <option value="EXAMS">Exams</option>
+                    <option value="SCHEDULE">Schedule</option>
+                    <option value="ACCOUNT">Account</option>
+                    <option value="OTHER">Other</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Status</label>
+                <select id="e-status" class="form-control">
+                    <option value="DRAFT">Draft</option>
+                    <option value="PUBLISHED">Published</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Tags <span style="font-weight:500;color:var(--text-muted);">(comma-separated)</span></label>
+            <input type="text" id="e-tags" class="form-control" placeholder="invoice, payment, download">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Content * <span style="font-weight:500;color:var(--text-muted);">(HTML supported)</span></label>
+            <textarea id="e-content" class="form-control" rows="14"
+                      placeholder="Write your article content here… (min 100 chars for Published)"
+                      style="resize:vertical;font-family:monospace;font-size:14px;padding:16px;background:var(--page-bg);"></textarea>
+            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-top:8px;text-align:right;" id="e-content-count">0 characters</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:32px;">
+            <button class="btn btn-secondary outline" onclick="closeEditor()">Cancel</button>
+            <button class="btn btn-primary" id="save-article-btn" onclick="saveArticle()">Save Article</button>
+        </div>
+    </div>
+</div>
+
+<main class="container page-content">
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Knowledge Base Management</h1>
+            <p>Create, edit, and manage self-help articles</p>
+        </div>
+        <div style="display:flex;gap:12px;">
+            <a href="support-knowledge-base.html" class="btn btn-secondary outline">👁 View Public KB</a>
+            <button class="btn btn-primary" onclick="openEditor()">➕ Create Article</button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="content-card">
+        <div class="filter-bar">
+            <div class="search-wrap">
+                <input type="text" id="f-search" class="form-control search-input"
+                       placeholder="🔍 Search articles…" oninput="debounce()">
+            </div>
+            <select id="f-status" class="form-control" style="width:160px;" onchange="loadArticles(0)">
+                <option value="">All Statuses</option>
+                <option value="DRAFT">Draft</option>
+                <option value="PUBLISHED">Published</option>
+                <option value="RETIRED">Retired</option>
+            </select>
+            <select id="f-category" class="form-control" style="width:160px;" onchange="loadArticles(0)">
+                <option value="">All Categories</option>
+                <option value="ENROLLMENT">Enrollment</option>
+                <option value="FINANCE">Finance</option>
+                <option value="ACADEMIC">Academic</option>
+                <option value="TECHNICAL">Technical</option>
+                <option value="EXAMS">Exams</option>
+                <option value="SCHEDULE">Schedule</option>
+                <option value="ACCOUNT">Account</option>
+                <option value="OTHER">Other</option>
+            </select>
+        </div>
+
+        <div class="table-wrapper" id="table-wrap">
+            <div class="empty-state"><p class="empty-state-title">Loading…</p></div>
+        </div>
+        <div class="pagination" id="pagination-bar" style="display:none;padding:24px;">
+            <span id="pagination-info" style="font-size:14px;font-weight:600;color:var(--text-muted);"></span>
+            <div class="pagination-controls">
+                <button class="page-btn" id="prev-btn" onclick="goToPage(currentPage-1)">‹</button>
+                <div id="page-numbers" style="display:flex;gap:4px;"></div>
+                <button class="page-btn" id="next-btn" onclick="goToPage(currentPage+1)">›</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="site-footer" style="margin-top:80px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    const role = getUserRole();
+    if (role !== 'SUPPORT_STAFF' && role !== 'ADMIN') window.location.href = 'support.html';
+    buildNavbar('support');
+
+    let currentPage=0, totalPages=0, editingId=null;
+    let debTimer;
+
+    loadArticles(0);
+
+    function debounce() { clearTimeout(debTimer); debTimer=setTimeout(()=>loadArticles(0),350); }
+
+    async function loadArticles(page) {
+        currentPage = page;
+        const search   = document.getElementById('f-search').value.trim();
+        const status   = document.getElementById('f-status').value;
+        const category = document.getElementById('f-category').value;
+        let url = `/knowledge-base/manage?page=${page}&size=20`;
+        if (search)   url += `&search=${encodeURIComponent(search)}`;
+        if (status)   url += `&status=${status}`;
+        if (category) url += `&category=${category}`;
+
+        const wrap = document.getElementById('table-wrap');
+        wrap.innerHTML = '<div class="empty-state"><p class="empty-state-title">Loading…</p></div>';
+
+        try {
+            const res = await apiCall(url);
+            const { content, totalElements, totalPages: tp, number } = res.data;
+            totalPages = tp;
+
+            if (!content.length) {
+                wrap.innerHTML = `<div class="empty-state" style="padding:64px 0;">
+                    <div class="empty-state-icon">📚</div>
+                    <p class="empty-state-title" style="font-size:20px;">No articles found.</p>
+                </div>`;
+                document.getElementById('pagination-bar').style.display='none';
+                return;
+            }
+
+            wrap.innerHTML = `<table>
+                <thead><tr><th>Title</th><th>Category</th><th>Status</th><th>Version</th><th>Views</th><th>Helpful</th><th>Updated</th><th style="text-align:right;">Actions</th></tr></thead>
+                <tbody>${content.map(a => `<tr>
+                    <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;color:var(--text-primary);">${a.title}</td>
+                    <td style="font-size:13px;font-weight:600;">${a.category}</td>
+                    <td>${getArticleStatusBadge(a.status)}</td>
+                    <td style="text-align:center;font-size:13px;font-weight:600;color:var(--text-muted);">v${a.version}</td>
+                    <td style="text-align:center;font-size:13px;font-weight:600;">${a.viewCount}</td>
+                    <td style="text-align:center;font-size:13px;font-weight:600;">👍 ${a.helpfulYes} <span style="margin:0 4px;color:var(--border-dark);">|</span> 👎 ${a.helpfulNo}</td>
+                    <td style="font-size:13px;font-weight:600;color:var(--text-muted);">${formatDate(a.updatedAt)}</td>
+                    <td style="text-align:right;">
+                        <div style="display:flex;gap:6px;justify-content:flex-end;">
+                            <a href="support-article.html?id=${a.id}" target="_blank" class="btn btn-sm btn-secondary outline" title="View">👁</a>
+                            ${a.status !== 'RETIRED' ? `<button class="btn btn-sm btn-secondary outline" onclick="editArticle(${a.id})" title="Edit">✏️</button>` : ''}
+                            ${role==='ADMIN' && a.status!=='RETIRED' ? `<button class="btn btn-sm btn-danger" onclick="retire(${a.id})" style="padding:2px 8px;">Retire</button>` : ''}
+                        </div>
+                    </td>
+                </tr>`).join('')}</tbody>
+            </table>`;
+
+            renderPagination(number, tp, totalElements);
+        } catch(err) {
+            wrap.innerHTML = `<div class="empty-state"><p class="empty-state-title" style="color:var(--danger)">Error: ${err.message}</p></div>`;
+        }
+    }
+
+    function renderPagination(cur, total, totalEls) {
+        const bar=document.getElementById('pagination-bar');
+        if(total<=1){bar.style.display='none';return;}
+        const s=cur*20+1,e=Math.min(s+19,totalEls);
+        document.getElementById('pagination-info').textContent=`Showing ${s}–${e} of ${totalEls}`;
+        const nums=document.getElementById('page-numbers');
+        nums.innerHTML='';
+        for(let i=0;i<Math.min(total,7);i++) nums.innerHTML+=`<button class="page-btn ${i===cur?'active':''}" onclick="goToPage(${i})">${i+1}</button>`;
+        document.getElementById('prev-btn').disabled=cur===0;
+        document.getElementById('next-btn').disabled=cur>=total-1;
+        bar.style.display='flex';
+    }
+    function goToPage(p){if(p<0||p>=totalPages)return;loadArticles(p);}
+
+    // Editor
+    function openEditor() {
+        editingId = null;
+        document.getElementById('editor-title').textContent = 'Create Article';
+        ['e-title','e-content','e-tags'].forEach(id => document.getElementById(id).value='');
+        document.getElementById('e-category').value='';
+        document.getElementById('e-status').value='DRAFT';
+        document.getElementById('e-content-count').textContent='0 characters';
+        document.getElementById('editor-modal').classList.add('open');
+    }
+
+    async function editArticle(id) {
+        try {
+            const res = await apiCall(`/knowledge-base/${id}`);
+            const a = res.data;
+            editingId = id;
+            document.getElementById('editor-title').textContent = 'Edit Article';
+            document.getElementById('e-title').value    = a.title;
+            document.getElementById('e-category').value = a.category;
+            document.getElementById('e-status').value   = a.status === 'RETIRED' ? 'DRAFT' : a.status;
+            document.getElementById('e-tags').value     = a.tags || '';
+            document.getElementById('e-content').value  = a.content;
+            document.getElementById('e-content-count').textContent = a.content.length + ' characters';
+            document.getElementById('editor-modal').classList.add('open');
+        } catch(err) { showToast('Failed to load article.', 'error'); }
+    }
+
+    document.getElementById('e-content').addEventListener('input', function() {
+        document.getElementById('e-content-count').textContent = this.value.length + ' characters';
+    });
+
+    function closeEditor() {
+        document.getElementById('editor-modal').classList.remove('open');
+        editingId = null;
+    }
+
+    async function saveArticle() {
+        const title    = document.getElementById('e-title').value.trim();
+        const category = document.getElementById('e-category').value;
+        const status   = document.getElementById('e-status').value;
+        const tags     = document.getElementById('e-tags').value.trim();
+        const content  = document.getElementById('e-content').value;
+
+        if (!title)    { showToast('Title is required.', 'error'); return; }
+        if (!category) { showToast('Category is required.', 'error'); return; }
+        if (!content)  { showToast('Content is required.', 'error'); return; }
+
+        const btn = document.getElementById('save-article-btn');
+        setLoading(btn, true, 'Saving…');
+        try {
+            const body = { title, category, content, tags, status };
+            if (editingId) {
+                await apiCall(`/knowledge-base/${editingId}`, { method: 'PUT', body });
+            } else {
+                await apiCall('/knowledge-base', { method: 'POST', body });
+            }
+            showToast(editingId ? 'Article updated!' : 'Article created!', 'success');
+            closeEditor();
+            loadArticles(currentPage);
+        } catch(err) {
+            setLoading(btn, false);
+            showToast(err.message || 'Save failed.', 'error');
+        }
+    }
+
+    async function retire(id) {
+        if (!confirm('Retire this article? It will be removed from public view but preserved in the database.')) return;
+        try {
+            await apiCall(`/knowledge-base/${id}/retire`, { method: 'POST' });
+            showToast('Article retired.', 'info');
+            loadArticles(currentPage);
+        } catch(err) { showToast(err.message, 'error'); }
+    }
+
+    document.getElementById('editor-modal').addEventListener('click', function(e) {
+        if(e.target===this) closeEditor();
+    });
+</script>
+</body>
+</html>

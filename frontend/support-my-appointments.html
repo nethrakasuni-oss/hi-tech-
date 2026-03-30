@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Appointments — Hi-Tech LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<main class="container page-content">
+    <div class="breadcrumb" style="margin-bottom:24px;">
+        <a href="support.html">Help Center</a> <span class="breadcrumb-sep">/</span>
+        <span style="font-weight:600;color:var(--text-primary);">My Appointments</span>
+    </div>
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1 id="page-title">My Appointments</h1>
+            <p id="page-sub">Your advising appointments</p>
+        </div>
+        <div style="display:flex;gap:12px;">
+            <a href="support-availability.html" class="btn btn-secondary outline hidden" id="avail-btn">⚙️ My Availability</a>
+            <a href="support-book-appointment.html" class="btn btn-primary" id="book-btn">📅 Book Appointment</a>
+        </div>
+    </div>
+
+    <div class="content-card">
+        <div class="table-wrapper" id="table-wrap">
+            <div class="empty-state"><p class="empty-state-title">Loading…</p></div>
+        </div>
+    </div>
+</main>
+
+<footer class="site-footer" style="margin-top:80px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    buildNavbar('support');
+
+    const role = getUserRole();
+    if (role === 'INSTRUCTOR') {
+        document.getElementById('page-title').textContent = 'Student Appointments';
+        document.getElementById('page-sub').textContent   = 'Appointments booked with you';
+        document.getElementById('book-btn').style.display = 'none';
+        document.getElementById('avail-btn').classList.remove('hidden');
+    }
+
+    loadAppointments();
+
+    async function loadAppointments() {
+        const wrap = document.getElementById('table-wrap');
+        try {
+            const res = await apiCall('/appointments?page=0&size=50');
+            const items = res.data.content || [];
+            if (!items.length) {
+                wrap.innerHTML = `<div class="empty-state" style="padding:64px 0;">
+                    <div class="empty-state-icon">📅</div>
+                    <p class="empty-state-title" style="font-size:20px;">No appointments yet.</p>
+                    ${role==='STUDENT' ? '<a href="support-book-appointment.html" class="btn btn-primary" style="margin-top:20px;">Book Appointment</a>' : ''}
+                </div>`;
+                return;
+            }
+            wrap.innerHTML = `<table>
+                <thead><tr><th>Date & Time</th><th>${role==='STUDENT'?'Instructor':'Student'}</th><th>Reason</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
+                <tbody>${items.map(a => {
+                const other = role==='STUDENT' ? a.instructorName : a.studentName;
+                const canCancel = a.status==='PENDING' || a.status==='CONFIRMED';
+                const canConfirm = role==='INSTRUCTOR' && a.status==='PENDING';
+                return `<tr>
+                        <td>
+                            <div style="font-weight:700;color:var(--text-primary);margin-bottom:2px;">${a.appointmentDate}</div>
+                            <div style="font-size:13px;font-weight:600;color:var(--text-muted);">${a.startTime} – ${a.endTime}</div>
+                        </td>
+                        <td style="font-weight:600;color:var(--text-primary);">${other}</td>
+                        <td style="font-size:14px;font-weight:500;">${a.reason.replace(/_/g,' ')}</td>
+                        <td>${getAppointmentStatusBadge(a.status)}</td>
+                        <td style="text-align:right;">
+                            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                                ${canConfirm ? `<button class="btn btn-sm btn-primary" onclick="confirm(${a.id})">✅ Confirm</button>` : ''}
+                                ${canCancel  ? `<button class="btn btn-sm btn-danger" onclick="cancel(${a.id})" style="padding:4px 10px;">Cancel</button>` : ''}
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('')}</tbody>
+            </table>`;
+        } catch(err) {
+            wrap.innerHTML = `<div class="empty-state"><p class="empty-state-title" style="color:var(--danger)">Error: ${err.message}</p></div>`;
+        }
+    }
+
+    async function confirm(id) {
+        try {
+            await apiCall(`/appointments/${id}/confirm`, { method: 'POST' });
+            showToast('Appointment confirmed!', 'success');
+            loadAppointments();
+        } catch(err) { showToast(err.message, 'error'); }
+    }
+
+    async function cancel(id) {
+        const reason = prompt('Reason for cancellation (optional):');
+        if (reason === null) return;
+        try {
+            await apiCall(`/appointments/${id}/cancel?reason=${encodeURIComponent(reason)}`, { method: 'POST' });
+            showToast('Appointment cancelled.', 'info');
+            loadAppointments();
+        } catch(err) { showToast(err.message, 'error'); }
+    }
+</script>
+</body>
+</html>

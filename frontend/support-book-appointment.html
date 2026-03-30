@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment — Hi-Tech LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        .instructor-card { background:var(--card-bg); border:2px solid var(--border-light); border-radius:16px; padding:24px; cursor:pointer; transition:all .2s; }
+        .instructor-card:hover { transform:translateY(-2px); box-shadow:0 10px 20px rgba(0,0,0,0.05); border-color:var(--brand-primary); }
+        .instructor-card.selected { border-color:var(--brand-primary); background:var(--primary-light); box-shadow:0 0 0 2px rgba(0,173,239,0.2); }
+        
+        .instructor-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:20px; margin-bottom:32px; }
+        
+        .slot-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; margin-bottom:24px; }
+        .slot-btn { padding:12px 8px; border:2px solid var(--border-light); border-radius:12px; background:var(--card-bg); cursor:pointer; font-size:14px; font-weight:700; color:var(--text-primary); text-align:center; transition:all .2s; }
+        .slot-btn:hover:not(:disabled) { border-color:var(--brand-primary); background:var(--primary-light); color:var(--brand-primary); transform:translateY(-2px); }
+        .slot-btn.selected { border-color:var(--brand-primary); background:var(--brand-primary); color:#fff; }
+        .slot-btn:disabled { opacity:.5; cursor:not-allowed; background:var(--page-bg); border-color:transparent; color:var(--text-muted); }
+        
+        .week-nav { display:flex; align-items:center; gap:16px; margin-bottom:20px; padding:8px 0; border-bottom:2px solid var(--border-light); }
+        
+        .step-heading { font-size:20px; font-weight:800; color:var(--text-primary); margin-bottom:24px; display:flex; align-items:center; gap:12px; }
+        .step-number { background:var(--brand-primary); color:white; width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-size:14px; font-weight:800; }
+    </style>
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<main class="container page-content" style="max-width:960px;">
+    <div class="breadcrumb" style="margin-bottom:24px;">
+        <a href="support.html">Help Center</a> <span class="breadcrumb-sep">/</span>
+        <span style="font-weight:600;color:var(--text-primary);">Book Appointment</span>
+    </div>
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>Book an Appointment</h1>
+            <p>Select an instructor and choose an available time slot</p>
+        </div>
+    </div>
+
+    <!-- Step 1: Select Instructor -->
+    <div id="step1" class="content-card" style="padding:40px;margin-bottom:32px;">
+        <div class="step-heading"><span class="step-number">1</span> Select an Instructor</div>
+        <div id="instructor-grid" class="instructor-grid">
+            <div class="empty-state" style="border:none;grid-column:1/-1;"><p class="empty-state-title">Loading instructors…</p></div>
+        </div>
+    </div>
+
+    <!-- Step 2: Select Slot -->
+    <div id="step2" class="content-card hidden" style="padding:40px;margin-bottom:32px;">
+        <div class="step-heading"><span class="step-number">2</span> Select a Time Slot</div>
+        <div class="week-nav">
+            <button class="btn btn-secondary outline" onclick="prevWeek()" style="padding:6px 16px;">‹ Prev</button>
+            <span id="week-label" style="font-size:16px;font-weight:700;color:var(--text-primary);"></span>
+            <button class="btn btn-secondary outline" onclick="nextWeek()" style="padding:6px 16px;">Next ›</button>
+        </div>
+        <div id="slot-grid" class="slot-grid">
+            <div class="empty-state" style="border:none;grid-column:1/-1;"><p class="empty-state-title">Loading slots…</p></div>
+        </div>
+        <div style="margin-top:24px;border-top:2px solid var(--border-light);padding-top:24px;">
+            <button class="btn btn-secondary outline" onclick="showStep1()">← Change Instructor</button>
+        </div>
+    </div>
+
+    <!-- Step 3: Confirm -->
+    <div id="step3" class="content-card hidden" style="padding:40px;margin-bottom:32px;">
+        <div class="step-heading"><span class="step-number">3</span> Confirm Your Appointment</div>
+        <div style="background:var(--page-bg);border:1px solid var(--border-light);border-radius:12px;padding:24px;margin-bottom:24px;">
+            <div id="booking-summary" style="font-size:15px;line-height:1.8;color:var(--text-body);"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="reason">Reason for Appointment *</label>
+            <select id="reason" class="form-control">
+                <option value="">Select reason…</option>
+                <option value="ACADEMIC_ADVISING">Academic Advising</option>
+                <option value="COURSE_QUERY">Course Query</option>
+                <option value="EXAM_QUERY">Exam Query</option>
+                <option value="ENROLLMENT_ISSUE">Enrollment Issue</option>
+                <option value="FINANCIAL_QUERY">Financial Query</option>
+                <option value="GENERAL_INQUIRY">General Inquiry</option>
+                <option value="OTHER">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="notes">Additional Notes <span style="font-weight:500;color:var(--text-muted);">(Optional)</span></label>
+            <textarea id="notes" class="form-control" rows="4" placeholder="Any additional information for the instructor…"></textarea>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:32px;">
+            <button class="btn btn-primary" id="confirm-btn" onclick="confirmBooking()" style="padding:12px 24px;">✅ Confirm Booking</button>
+            <button class="btn btn-secondary outline" onclick="showStep2()" style="padding:12px 24px;">← Change Slot</button>
+        </div>
+    </div>
+
+    <!-- Success -->
+    <div id="success-state" class="content-card hidden" style="text-align:center;padding:64px 24px;">
+        <div style="font-size:72px;margin-bottom:24px;">🎉</div>
+        <h2 style="font-size:32px;font-weight:800;color:var(--text-primary);margin-bottom:16px;">Appointment Booked!</h2>
+        <p style="font-size:16px;font-weight:500;color:var(--text-body);max-width:500px;margin:0 auto 32px;line-height:1.6;" id="success-desc"></p>
+        <div style="display:flex;gap:16px;justify-content:center;">
+            <a href="support-my-appointments.html" class="btn btn-primary" style="padding:12px 24px;">View My Appointments</a>
+            <a href="support.html" class="btn btn-secondary outline" style="padding:12px 24px;">Back to Help Center</a>
+        </div>
+    </div>
+</main>
+
+<footer class="site-footer" style="margin-top:80px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    if (getUserRole() !== 'STUDENT') window.location.href = 'support.html';
+    buildNavbar('support');
+
+    let selectedInstructor = null;
+    let selectedSlot       = null;
+    let weekOffset         = 0;
+
+    loadInstructors();
+
+    async function loadInstructors() {
+        try {
+            const res = await apiCall('/appointments/instructors');
+            const instructors = res.data || [];
+            const grid = document.getElementById('instructor-grid');
+            if (!instructors.length) {
+                grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;border:none;"><p class="empty-state-title">No instructors available at this time.</p></div>';
+                return;
+            }
+            grid.innerHTML = instructors.map(i => `
+                <div class="instructor-card" id="inst-${i.id}" onclick="selectInstructor(${i.id},'${i.fullName}','${i.email}')">
+                    <div class="user-avatar" style="margin:0 auto 16px;font-size:16px;width:56px;height:56px;">${getInitials(i.fullName)}</div>
+                    <div style="font-weight:800;font-size:16px;color:var(--text-primary);text-align:center;margin-bottom:4px;">${i.fullName}</div>
+                    <div style="font-size:13px;font-weight:600;color:var(--text-secondary);text-align:center;">${i.email}</div>
+                </div>`).join('');
+        } catch(err) { showToast('Failed to load instructors: ' + err.message, 'error'); }
+    }
+
+    function selectInstructor(id, name, email) {
+        selectedInstructor = { id, name, email };
+        document.querySelectorAll('.instructor-card').forEach(c => c.classList.remove('selected'));
+        document.getElementById(`inst-${id}`).classList.add('selected');
+        weekOffset = 0;
+        showStep2();
+    }
+
+    function showStep1() { hide(document.getElementById('step2')); show(document.getElementById('step1')); }
+    function showStep2() { hide(document.getElementById('step1')); hide(document.getElementById('step3')); show(document.getElementById('step2')); loadSlots(); }
+    function showStep3(slot) {
+        selectedSlot = slot;
+        hide(document.getElementById('step2'));
+        show(document.getElementById('step3'));
+        document.getElementById('booking-summary').innerHTML =
+            `<strong style="color:var(--text-primary);">Instructor:</strong> ${selectedInstructor.name}<br>
+             <strong style="color:var(--text-primary);">Date:</strong> ${slot.date}<br>
+             <strong style="color:var(--text-primary);">Time:</strong> ${slot.startTime} – ${slot.endTime}`;
+    }
+
+    function getWeekDates() {
+        const today = new Date();
+        today.setDate(today.getDate() + weekOffset * 7);
+        // Get Monday
+        const day = today.getDay();
+        const diff = (day === 0) ? -6 : 1 - day;
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + diff);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        return { from: formatD(monday), to: formatD(sunday), label: formatLabel(monday) + ' – ' + formatLabel(sunday) };
+    }
+
+    function formatD(d) { return d.toISOString().split('T')[0]; }
+    function formatLabel(d) { return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }
+
+    function prevWeek() { weekOffset--; loadSlots(); }
+    function nextWeek() { weekOffset++; loadSlots(); }
+
+    async function loadSlots() {
+        const { from, to, label } = getWeekDates();
+        document.getElementById('week-label').textContent = label;
+        const grid = document.getElementById('slot-grid');
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;border:none;"><p class="empty-state-title">Loading slots…</p></div>';
+        try {
+            const res = await apiCall(`/appointments/availability/${selectedInstructor.id}?from=${from}&to=${to}`);
+            const slots = res.data || [];
+            if (!slots.length) {
+                grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;border:none;"><p class="empty-state-title">No availability this week.</p></div>';
+                return;
+            }
+            grid.innerHTML = slots.map(s => {
+                const label = `${s.date}<br><span style="font-size:16px;display:inline-block;margin-top:4px;">${s.startTime.substring(0,5)}</span>`;
+                return `<button class="slot-btn" ${!s.available?'disabled':''} onclick="showStep3(${JSON.stringify(s).replace(/"/g,'&quot;')})">
+                    ${label}${!s.available?' <br><span style="font-size:11px;font-weight:600;display:inline-block;margin-top:4px;">Booked</span>':''}
+                </button>`;
+            }).join('');
+        } catch(err) { showToast('Failed to load slots.', 'error'); }
+    }
+
+    async function confirmBooking() {
+        const reason = document.getElementById('reason').value;
+        const notes  = document.getElementById('notes').value.trim();
+        if (!reason) { showToast('Please select a reason.', 'error'); return; }
+
+        const btn = document.getElementById('confirm-btn');
+        setLoading(btn, true, 'Booking…');
+        try {
+            await apiCall('/appointments', {
+                method: 'POST',
+                body: {
+                    instructorId:    selectedInstructor.id,
+                    appointmentDate: selectedSlot.date,
+                    startTime:       selectedSlot.startTime,
+                    reason, notes
+                }
+            });
+            hide(document.getElementById('step3'));
+            document.getElementById('success-desc').textContent =
+                `Your appointment with ${selectedInstructor.name} on ${selectedSlot.date} at ${selectedSlot.startTime} has been requested. You'll be notified once confirmed.`;
+            show(document.getElementById('success-state'));
+        } catch(err) {
+            setLoading(btn, false);
+            showToast(err.message || 'Booking failed.', 'error');
+        }
+    }
+</script>
+</body>
+</html>

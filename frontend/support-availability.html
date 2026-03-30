@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Availability — Hi-Tech LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        .day-row { display:grid; grid-template-columns:120px 1fr 1fr 60px; gap:16px; align-items:center; padding:16px 0; border-bottom:1px solid var(--border-light); }
+        .day-row:last-child { border-bottom:none; }
+        .day-label { font-weight:700; font-size:15px; color:var(--text-primary); }
+        
+        .day-toggle { display:flex; align-items:center; gap:12px; }
+        .toggle-switch { position:relative; width:48px; height:28px; cursor:pointer; }
+        .toggle-switch input { opacity:0; width:0; height:0; }
+        .toggle-slider { position:absolute; inset:0; background:var(--border-dark); border-radius:999px; transition:.25s ease; }
+        .toggle-switch input:checked + .toggle-slider { background:var(--success); }
+        .toggle-slider:before { content:''; position:absolute; width:20px; height:20px; left:4px; top:4px; background:#fff; border-radius:50%; transition:.25s ease; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+        .toggle-switch input:checked + .toggle-slider:before { transform:translateX(20px); }
+        
+        .blocked-tag { display:inline-flex; align-items:center; gap:6px; background:#fee2e2; border:1px solid #fca5a5; color:#991b1b; padding:6px 12px; border-radius:999px; font-size:13px; font-weight:600; }
+        .blocked-tag button { background:none; border:none; cursor:pointer; color:#7f1d1d; font-size:16px; line-height:1; padding:0; display:flex; align-items:center; justify-content:center; border-radius:50%; transition:background 0.2s; width:20px; height:20px; }
+        .blocked-tag button:hover { background:rgba(0,0,0,0.05); }
+        .blocked-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+        
+        .session-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+        
+        @media(max-width:640px){
+            .day-row { grid-template-columns:100px 1fr; grid-template-rows:auto auto; }
+            .session-grid { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<main class="container page-content" style="max-width:860px;">
+
+    <div class="breadcrumb" style="margin-bottom:24px;">
+        <a href="support.html">Help Center</a> <span class="breadcrumb-sep">/</span> <span style="font-weight:600;color:var(--text-primary);">Manage Availability</span>
+    </div>
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>My Availability</h1>
+            <p>Set the days and hours when students can book appointments with you</p>
+        </div>
+        <a href="support-my-appointments.html" class="btn btn-secondary outline">📅 My Appointments</a>
+    </div>
+
+    <!-- Session Settings -->
+    <div class="content-card" style="margin-bottom:24px;padding:32px;">
+        <div class="card-header" style="margin-bottom:24px;border-bottom:2px solid var(--border-light);padding-bottom:16px;">
+            <span style="font-size:20px;font-weight:800;color:var(--text-primary);">⚙️ Session Settings</span>
+        </div>
+        <div class="session-grid">
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Session Duration</label>
+                <select id="session-duration" class="form-control">
+                    <option value="30">30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">60 minutes</option>
+                </select>
+                <div class="form-hint">How long each appointment slot will be</div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Buffer Between Sessions</label>
+                <select id="buffer-time" class="form-control">
+                    <option value="0">No buffer</option>
+                    <option value="10">10 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                </select>
+                <div class="form-hint">Gap between consecutive appointments</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Availability -->
+    <div class="content-card" style="margin-bottom:24px;padding:32px;">
+        <div class="card-header" style="margin-bottom:24px;border-bottom:2px solid var(--border-light);padding-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+            <span style="font-size:20px;font-weight:800;color:var(--text-primary);">📅 Weekly Availability</span>
+            <span style="font-size:13px;font-weight:600;color:var(--text-muted);">Toggle each day and set your available hours</span>
+        </div>
+
+        <div id="days-container">
+            <!-- Day rows rendered by JS -->
+        </div>
+    </div>
+
+    <!-- Block Out Dates -->
+    <div class="content-card" style="margin-bottom:32px;padding:32px;">
+        <div class="card-header" style="margin-bottom:16px;">
+            <span style="font-size:20px;font-weight:800;color:var(--text-primary);">🚫 Block Out Specific Dates</span>
+        </div>
+        <p style="font-size:14px;color:var(--text-body);margin-bottom:20px;">Mark dates when you are completely unavailable (e.g. holidays, leave days).</p>
+
+        <div style="display:flex;gap:12px;margin-bottom:24px;align-items:center;flex-wrap:wrap;">
+            <input type="date" id="block-date-input" class="form-control" style="max-width:220px;">
+            <button class="btn btn-secondary outline" onclick="addBlockedDate()" style="padding:10px 16px;">➕ Add Date</button>
+        </div>
+
+        <div class="blocked-list" id="blocked-dates-list">
+            <span style="font-size:14px;font-weight:500;color:var(--text-muted);">No blocked dates added yet.</span>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div style="display:flex;gap:16px;align-items:center;padding:24px;background:var(--card-bg);border:1px solid var(--border-light);border-radius:12px;">
+        <button class="btn btn-primary" id="save-btn" onclick="saveAvailability()" style="padding:12px 32px;font-size:16px;">💾 Save Availability</button>
+        <a href="support.html" class="btn btn-secondary outline" style="padding:12px 24px;">Cancel</a>
+    </div>
+</main>
+
+<footer class="site-footer" style="margin-top:80px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    // Only instructors can access this page
+    if (getUserRole() !== 'INSTRUCTOR') window.location.href = 'support.html';
+    buildNavbar('support');
+
+    const DAYS = [
+        { key: 'MONDAY',    label: 'Monday' },
+        { key: 'TUESDAY',   label: 'Tuesday' },
+        { key: 'WEDNESDAY', label: 'Wednesday' },
+        { key: 'THURSDAY',  label: 'Thursday' },
+        { key: 'FRIDAY',    label: 'Friday' },
+        { key: 'SATURDAY',  label: 'Saturday' },
+        { key: 'SUNDAY',    label: 'Sunday' },
+    ];
+
+    // Day availability state
+    const dayState = {};
+    DAYS.forEach(d => {
+        dayState[d.key] = { available: false, startTime: '09:00', endTime: '17:00' };
+    });
+
+    // Blocked dates list
+    let blockedDates = [];
+
+    // Render day rows
+    function renderDays() {
+        const container = document.getElementById('days-container');
+        container.innerHTML = DAYS.map(d => `
+            <div class="day-row" id="row-${d.key}">
+                <div class="day-label">${d.label}</div>
+                <div class="day-toggle">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-${d.key}" onchange="toggleDay('${d.key}',this.checked)"
+                               ${dayState[d.key].available ? 'checked' : ''}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span style="font-size:14px;font-weight:600;color:var(--text-primary);" id="toggle-label-${d.key}">
+                        ${dayState[d.key].available ? '<span style="color:var(--success)">Available</span>' : '<span style="color:var(--text-muted)">Unavailable</span>'}
+                    </span>
+                </div>
+                <div style="display:flex;gap:12px;align-items:center;" id="time-${d.key}"
+                     style="${dayState[d.key].available ? '' : 'opacity:.3;pointer-events:none;'}">
+                    <input type="time" id="start-${d.key}" class="form-control" style="max-width:140px;"
+                           value="${dayState[d.key].startTime}"
+                           ${dayState[d.key].available ? '' : 'disabled'}>
+                    <span style="color:var(--text-muted);font-size:13px;font-weight:600;">to</span>
+                    <input type="time" id="end-${d.key}" class="form-control" style="max-width:140px;"
+                           value="${dayState[d.key].endTime}"
+                           ${dayState[d.key].available ? '' : 'disabled'}>
+                </div>
+                <div></div>
+            </div>
+        `).join('');
+    }
+
+    function toggleDay(dayKey, checked) {
+        dayState[dayKey].available = checked;
+        document.getElementById('toggle-label-' + dayKey).innerHTML = checked ? '<span style="color:var(--success)">Available</span>' : '<span style="color:var(--text-muted)">Unavailable</span>';
+        const startEl = document.getElementById('start-' + dayKey);
+        const endEl   = document.getElementById('end-' + dayKey);
+        startEl.disabled = !checked;
+        endEl.disabled   = !checked;
+        document.getElementById('time-' + dayKey).style.opacity = checked ? '1' : '0.3';
+        document.getElementById('time-' + dayKey).style.pointerEvents = checked ? '' : 'none';
+    }
+
+    function addBlockedDate() {
+        const input = document.getElementById('block-date-input');
+        const val   = input.value;
+        if (!val) { showToast('Please select a date.', 'error'); return; }
+        if (blockedDates.includes(val)) { showToast('This date is already blocked.', 'info'); return; }
+        blockedDates.push(val);
+        input.value = '';
+        renderBlockedDates();
+    }
+
+    function removeBlockedDate(date) {
+        blockedDates = blockedDates.filter(d => d !== date);
+        renderBlockedDates();
+    }
+
+    function renderBlockedDates() {
+        const list = document.getElementById('blocked-dates-list');
+        if (!blockedDates.length) {
+            list.innerHTML = '<span style="font-size:14px;font-weight:500;color:var(--text-muted);">No blocked dates added yet.</span>';
+            return;
+        }
+        list.innerHTML = blockedDates.sort().map(d =>
+            `<span class="blocked-tag">
+                📅 ${d}
+                <button onclick="removeBlockedDate('${d}')" title="Remove">×</button>
+            </span>`
+        ).join('');
+    }
+
+    async function saveAvailability() {
+        // Read current values from inputs before saving
+        DAYS.forEach(d => {
+            const startEl = document.getElementById('start-' + d.key);
+            const endEl   = document.getElementById('end-' + d.key);
+            if (startEl && endEl) {
+                dayState[d.key].startTime = startEl.value;
+                dayState[d.key].endTime   = endEl.value;
+            }
+        });
+
+        // Validate: available days must have start < end
+        for (const d of DAYS) {
+            if (dayState[d.key].available) {
+                if (!dayState[d.key].startTime || !dayState[d.key].endTime) {
+                    showToast(`Please set both start and end times for ${d.label}.`, 'error');
+                    return;
+                }
+                if (dayState[d.key].startTime >= dayState[d.key].endTime) {
+                    showToast(`End time must be after start time for ${d.label}.`, 'error');
+                    return;
+                }
+            }
+        }
+
+        const sessionDuration = parseInt(document.getElementById('session-duration').value, 10);
+        const bufferMinutes   = parseInt(document.getElementById('buffer-time').value, 10);
+
+        const weeklySlots = DAYS.map(d => ({
+            dayOfWeek:  d.key,
+            startTime:  dayState[d.key].startTime,
+            endTime:    dayState[d.key].endTime,
+            available:  dayState[d.key].available
+        }));
+
+        const btn = document.getElementById('save-btn');
+        setLoading(btn, true, 'Saving…');
+
+        try {
+            await apiCall('/appointments/availability', {
+                method: 'POST',
+                body: {
+                    weeklySlots,
+                    blockedDates,
+                    sessionDurationMinutes: sessionDuration,
+                    bufferMinutes
+                }
+            });
+            showToast('Availability saved successfully!', 'success');
+        } catch(err) {
+            showToast(err.message || 'Failed to save availability.', 'error');
+        } finally {
+            setLoading(btn, false);
+        }
+    }
+
+    // Initialize
+    renderDays();
+    renderBlockedDates();
+
+    // Set today's date as the min for block-out input
+    document.getElementById('block-date-input').min = new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>

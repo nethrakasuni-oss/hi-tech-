@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit a Support Ticket — Hi-Tech LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<main class="container page-content" style="max-width:800px;">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb" style="margin-bottom:24px;">
+        <a href="support.html">Help Center</a> <span class="breadcrumb-sep">/</span>
+        <span style="font-weight:600;color:var(--text-primary);">New Ticket</span>
+    </div>
+
+    <div class="content-card" style="padding:40px;">
+        <h2 style="font-size:24px;font-weight:800;color:var(--text-primary);margin-bottom:32px;">Submit a Support Ticket</h2>
+        
+        <div class="alert alert-danger hidden" id="error-banner" style="margin-bottom:24px;">
+            <span class="alert-icon">⚠️</span><span id="error-text"></span>
+        </div>
+
+        <!-- Suggested articles panel -->
+        <div id="suggest-panel" class="hidden" style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:20px;margin-bottom:24px;">
+            <div style="font-size:14px;font-weight:800;color:#0369a1;margin-bottom:12px;">💡 Related Articles — did any of these help?</div>
+            <div id="suggest-list"></div>
+            <div style="margin-top:16px;display:flex;gap:12px;">
+                <button class="btn btn-primary" onclick="hide(document.getElementById('suggest-panel'));document.getElementById('submit-btn').disabled=false;">No, continue submitting</button>
+            </div>
+        </div>
+
+        <form id="ticket-form" novalidate>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" for="category">Category *</label>
+                    <select id="category" name="category" class="form-control">
+                        <option value="">Select category...</option>
+                        <option value="ENROLLMENT">Enrollment</option>
+                        <option value="FINANCE">Finance</option>
+                        <option value="ACADEMIC">Academic</option>
+                        <option value="TECHNICAL">Technical</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                    <div class="form-error" id="category-error"></div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" for="priority">Priority</label>
+                    <select id="priority" name="priority" class="form-control">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM" selected>Medium</option>
+                        <option value="HIGH">High</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="subject">Subject * <span style="font-weight:500;color:var(--text-muted);">(max 100 chars)</span></label>
+                <input type="text" id="subject" name="subject" class="form-control" maxlength="100"
+                       placeholder="Briefly describe your issue" oninput="onSubjectInput(this.value)">
+                <div class="form-error" id="subject-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="description">Description * <span id="desc-counter" style="font-weight:600;color:var(--text-muted);float:right;"></span></label>
+                <textarea id="description" name="description" class="form-control" rows="8"
+                          placeholder="Describe your issue in detail (minimum 20 characters)..."
+                          minlength="20" maxlength="2000" style="resize:vertical;"
+                          oninput="updateDescCounter()"></textarea>
+                <div class="form-error" id="description-error"></div>
+            </div>
+
+            <div style="margin-top:32px;display:flex;gap:16px;align-items:center;">
+                <button type="submit" class="btn btn-primary" id="submit-btn" style="padding:12px 24px;">Submit Ticket</button>
+                <a href="support.html" class="btn btn-secondary outline" style="padding:12px 24px;">Cancel</a>
+            </div>
+        </form>
+
+        <!-- Success state -->
+        <div id="success-state" class="hidden" style="text-align:center;padding:48px 0;">
+            <div style="font-size:64px;margin-bottom:24px;">✅</div>
+            <h3 style="font-size:24px;font-weight:800;color:var(--text-primary);">Ticket Submitted!</h3>
+            <p style="font-size:16px;color:var(--text-body);margin-top:12px;max-width:400px;margin:12px auto 0;">Your ticket ID is <strong style="color:var(--brand-primary);" id="ticket-id-display"></strong>. We'll get back to you soon.</p>
+            <div style="margin-top:32px;display:flex;gap:16px;justify-content:center;">
+                <a href="support-my-tickets.html" class="btn btn-primary">View My Tickets</a>
+                <a href="support.html" class="btn btn-secondary outline">Back to Help Center</a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="site-footer" style="margin-top:80px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    if (getUserRole() !== 'STUDENT') window.location.href = 'support.html';
+    buildNavbar('support');
+
+    // Pre-fill from KB article
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('category')) {
+        document.getElementById('category').value = params.get('category');
+    }
+
+    function updateDescCounter() {
+        const len = document.getElementById('description').value.length;
+        document.getElementById('desc-counter').textContent = `${len}/2000`;
+    }
+
+    let suggestTimer;
+    function onSubjectInput(val) {
+        clearTimeout(suggestTimer);
+        if (val.trim().length < 4) {
+            hide(document.getElementById('suggest-panel'));
+            document.getElementById('submit-btn').disabled = false;
+            return;
+        }
+        suggestTimer = setTimeout(async () => {
+            try {
+                const res = await apiCall(`/knowledge-base?search=${encodeURIComponent(val)}&size=3`);
+                const arts = res.data.content || [];
+                if (!arts.length) {
+                    hide(document.getElementById('suggest-panel'));
+                    document.getElementById('submit-btn').disabled = false;
+                    return;
+                }
+                document.getElementById('suggest-list').innerHTML = arts.map(a =>
+                    `<div style="margin-bottom:10px;"><a href="support-article.html?id=${a.id}" target="_blank" style="font-size:14px;font-weight:700;color:var(--brand-primary);text-decoration:none;">📄 ${a.title}</a></div>`
+                ).join('');
+                show(document.getElementById('suggest-panel'));
+                document.getElementById('submit-btn').disabled = true;
+            } catch(e) {
+                document.getElementById('submit-btn').disabled = false;
+            }
+        }, 500);
+    }
+
+    document.getElementById('ticket-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        clearAllErrors(this);
+        hide(document.getElementById('error-banner'));
+
+        const category    = document.getElementById('category').value;
+        const subject     = document.getElementById('subject').value.trim();
+        const description = document.getElementById('description').value.trim();
+        const priority    = document.getElementById('priority').value;
+
+        let valid = true;
+        if (!category)  { showFieldError(document.getElementById('category'), 'Please select a category'); valid=false; }
+        if (!subject)   { showFieldError(document.getElementById('subject'), 'Subject is required'); valid=false; }
+        if (description.length < 20) { showFieldError(document.getElementById('description'), 'Description must be at least 20 characters'); valid=false; }
+        if (!valid) return;
+
+        const btn = document.getElementById('submit-btn');
+        setLoading(btn, true, 'Submitting…');
+
+        try {
+            const res = await apiCall('/support/tickets', {
+                method: 'POST',
+                body: { category, subject, description, priority }
+            });
+            hide(document.getElementById('ticket-form'));
+            document.getElementById('ticket-id-display').textContent = res.data.ticketNumber;
+            show(document.getElementById('success-state'));
+        } catch(err) {
+            setLoading(btn, false);
+            document.getElementById('error-text').textContent = err.message || 'Submission failed.';
+            show(document.getElementById('error-banner'));
+        }
+    });
+
+    updateDescCounter();
+</script>
+</body>
+</html>
