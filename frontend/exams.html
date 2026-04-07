@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exams — Hi-Tech LMS</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <style>
+    /* Student exam card overrides */
+    .exam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+    .exam-card {
+      background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 16px;
+      padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,.03);
+      display: flex; flex-direction: column; gap: 12px;
+      transition: box-shadow .15s, transform .15s;
+    }
+    .exam-card:hover { box-shadow: var(--shadow-md); transform:translateY(-2px); }
+    .exam-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .exam-card-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+    .exam-card-course { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--brand-primary); }
+    .exam-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--text-muted); }
+    .exam-meta span { display: flex; align-items: center; gap: 4px; background: var(--page-bg); padding:4px 8px; border-radius:6px; }
+    .exam-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+    .attempts-info { font-size: 12px; color: var(--text-muted); display:flex;flex-direction:column;gap:4px; }
+    
+    .pending-badge {
+      display: inline-block; background: #fee2e2; color: #dc2626;
+      font-size: 11px; font-weight: 700; padding: 2px 8px;
+      border-radius: 999px; margin-left: 6px;
+    }
+
+    /* ---- View Results section ---- */
+    #results-section { display: none; }
+    .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+    .result-summary-card {
+      background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 16px;
+      padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,.03);
+      display: flex; flex-direction: column; gap: 14px;
+      transition: box-shadow .15s, transform .15s;
+      position: relative; overflow: hidden;
+    }
+    .result-summary-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    }
+    .result-summary-card.passed-card::before  { background: linear-gradient(90deg, var(--success), #4ade80); }
+    .result-summary-card.failed-card::before  { background: linear-gradient(90deg, var(--danger), #f87171); }
+    .result-summary-card.pending-card::before { background: linear-gradient(90deg, var(--warning), #fbbf24); }
+    .result-summary-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .result-card-course { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--brand-primary); }
+    .result-card-title  { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+    .score-display {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--page-bg); border-radius: 12px; padding: 14px 18px;
+    }
+    .score-fraction { font-size: 22px; font-weight: 800; color: var(--text-primary); }
+    .score-fraction span { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+    .score-pct {
+      font-size: 28px; font-weight: 800;
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-dark));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .result-meta-row { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--text-muted); }
+    .result-meta-row span { display: flex; align-items: center; gap: 4px; background: var(--page-bg); padding: 4px 8px; border-radius: 6px; }
+    .result-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<main class="container page-content">
+
+  <!-- ===== STUDENT VIEW ===== -->
+  <div id="student-view" class="hidden">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>My Exams</h1>
+        <p>Exams for your enrolled courses</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <select id="std-course-filter" class="form-control" style="width:200px;" onchange="loadStudentExams()">
+          <option value="">All Courses</option>
+        </select>
+        <div style="display:flex;border:1px solid var(--border-light);border-radius:8px;overflow:hidden;">
+          <button class="view-tab-btn active" id="tab-btn-all"       onclick="setStudentTab('all',this)">All</button>
+          <button class="view-tab-btn" id="tab-btn-open"             onclick="setStudentTab('open',this)">Open</button>
+          <button class="view-tab-btn" id="tab-btn-completed"        onclick="setStudentTab('completed',this)">Completed</button>
+          <button class="view-tab-btn" id="tab-btn-results"          onclick="setStudentTab('results',this)">🏆 View Results</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="student-exam-grid" class="exam-grid">
+      <div class="empty-state" style="grid-column:1/-1;">
+        <div class="empty-state-icon">📝</div>
+        <p class="empty-state-title" style="font-size:18px;">Loading exams…</p>
+      </div>
+    </div>
+
+    <!-- ===== VIEW RESULTS SECTION ===== -->
+    <div id="results-section">
+      <div id="results-grid" class="results-grid">
+        <div class="empty-state" style="grid-column:1/-1;">
+          <div class="empty-state-icon">🏆</div>
+          <p class="empty-state-title" style="font-size:18px;">Loading results…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== INSTRUCTOR / ADMIN VIEW ===== -->
+  <div id="manage-view" class="hidden">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Exam Management</h1>
+        <p id="manage-subtitle">Manage assessments for your courses</p>
+      </div>
+      <a href="exam-builder.html" class="btn btn-primary">+ Create New Exam</a>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-grid" id="manage-stats" style="margin-bottom:24px;grid-template-columns:repeat(4,1fr);">
+      <div class="stat-card"><div class="stat-label">Total Exams</div><div class="stat-value" id="stat-total">—</div></div>
+      <div class="stat-card"><div class="stat-label" style="color:var(--success);">Active</div><div class="stat-value" id="stat-active" style="color:var(--success);">—</div></div>
+      <div class="stat-card"><div class="stat-label" style="color:var(--warning);">Draft</div><div class="stat-value" id="stat-draft" style="color:var(--warning);">—</div></div>
+      <div class="stat-card"><div class="stat-label" style="color:var(--danger);">Pending Grades</div><div class="stat-value" id="stat-pending" style="color:var(--danger);">—</div></div>
+    </div>
+
+    <div class="content-card" style="padding:0;">
+      <!-- Filters -->
+      <div class="filter-bar" style="border-radius:16px 16px 0 0; border:none; border-bottom:1px solid var(--border-subtle); padding:16px 24px;">
+        <input type="text" id="f-search" class="form-control search-input" placeholder="🔍 Exam title…" style="max-width:220px;" oninput="debounceLoad()">
+        <select id="f-status" class="form-control" onchange="loadManageExams(0)" style="max-width:160px;">
+          <option value="">All Statuses</option>
+          <option value="DRAFT">Draft</option>
+          <option value="ACTIVE">Active</option>
+          <option value="DEACTIVATED">Deactivated</option>
+          <option value="ARCHIVED">Archived</option>
+        </select>
+        <select id="f-course" class="form-control" onchange="loadManageExams(0)" style="max-width:200px;">
+          <option value="">All Courses</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="clearFilters()">Reset</button>
+      </div>
+
+      <div id="manage-table-wrap">
+        <p class="text-muted" style="padding:32px;">Loading…</p>
+      </div>
+      
+      <div class="pagination" id="pagination" style="display:flex; border-top:1px solid var(--border-subtle); border-radius:0 0 16px 16px;"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer" style="margin-top:40px;">
+  <div class="container">
+      <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+      <div class="footer-links">
+          <a href="#">Support</a>
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+      </div>
+  </div>
+</footer>
+
+<style>
+  .view-tab-btn { padding:8px 16px;font-size:13px;font-weight:600;border:none;background:var(--card-bg);color:var(--text-muted);cursor:pointer;border-right:1px solid var(--border-light);transition:background 0.2s, color 0.2s; }
+  .view-tab-btn:last-child{border-right:none;}
+  .view-tab-btn:hover { background:var(--page-bg); color:var(--text-body); }
+  .view-tab-btn.active{background:var(--brand-primary);color:#fff;}
+</style>
+
+<script src="js/common.js"></script>
+<script>
+  requireAuth();
+  buildNavbar('exams');
+  const role = getUserRole();
+  let studentTabFilter = 'all';
+  let allStudentExams = [];
+
+  if (role === 'STUDENT') {
+    show(document.getElementById('student-view'));
+    loadEnrolledCoursesFilter();
+    loadStudentExams();
+  } else {
+    show(document.getElementById('manage-view'));
+    if (role === 'ADMIN') {
+      document.getElementById('manage-subtitle').textContent = 'All exams across all courses';
+    }
+    loadManageCourseFilter();
+    loadManageExams(0);
+  }
+
+  // ======= STUDENT =======
+  async function loadEnrolledCoursesFilter() {
+    try {
+      const r = await apiCall('/courses/my');
+      const sel = document.getElementById('std-course-filter');
+      (r.data || []).forEach(c => {
+        sel.innerHTML += `<option value="${c.id}">${c.title}</option>`;
+      });
+    } catch(e) {}
+  }
+
+  function setStudentTab(tab, btn) {
+    studentTabFilter = tab;
+    document.querySelectorAll('.view-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const grid    = document.getElementById('student-exam-grid');
+    const results = document.getElementById('results-section');
+    const filter  = document.getElementById('std-course-filter');
+
+    if (tab === 'results') {
+      grid.style.display    = 'none';
+      results.style.display = 'block';
+      filter.style.display  = 'none';
+      loadMyResults();
+    } else {
+      grid.style.display    = '';
+      results.style.display = 'none';
+      filter.style.display  = '';
+      renderStudentExams();
+    }
+  }
+
+  async function loadStudentExams() {
+    const courseId = document.getElementById('std-course-filter').value;
+    let url = '/exams';
+    if (courseId) url += `?courseId=${courseId}`;
+    try {
+      const r = await apiCall(url);
+      allStudentExams = r.data || [];
+      renderStudentExams();
+    } catch(e) {
+      document.getElementById('student-exam-grid').innerHTML =
+              `<div class="empty-state" style="grid-column:1/-1;">
+                <p class="empty-state-title" style="color:var(--danger);font-size:16px;">Failed to load exams: ${e.message}</p>
+              </div>`;
+    }
+  }
+
+  function renderStudentExams() {
+    let exams = allStudentExams;
+    if (studentTabFilter === 'open') {
+      exams = exams.filter(e => e.windowStatus === 'OPEN' && e.studentAttemptStatus === 'NOT_STARTED');
+    } else if (studentTabFilter === 'completed') {
+      exams = exams.filter(e => ['SUBMITTED','GRADED'].includes(e.studentAttemptStatus));
+    }
+
+    const grid = document.getElementById('student-exam-grid');
+    if (!exams.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+          <div class="empty-state-icon">📝</div>
+          <p class="empty-state-title" style="font-size:18px;">No exams found</p>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = exams.map(e => {
+      const attStatus = e.studentAttemptStatus || 'NOT_STARTED';
+      const remaining = e.attemptsRemaining < 0 ? 'Unlimited' : `${e.attemptsRemaining} remaining`;
+      const used = e.attemptsUsed || 0;
+      const maxAtt = e.maxAttempts ? `of ${e.maxAttempts}` : '(unlimited)';
+
+      let ctaBtn = '';
+      if (e.windowStatus === 'OPEN') {
+        if (attStatus === 'NOT_STARTED' && (e.attemptsRemaining !== 0)) {
+          ctaBtn = `<button class="btn btn-primary" onclick="startExam(${e.id})">Start Exam</button>`;
+        } else if (attStatus === 'IN_PROGRESS') {
+          ctaBtn = `<a href="exam-take.html?attemptId=${e.activeAttemptId}&examId=${e.id}" class="btn btn-primary">Resume Exam</a>`;
+        } else if (e.attemptsRemaining === 0) {
+          ctaBtn = `<span class="btn btn-secondary" style="opacity:.5;cursor:default;">No Attempts Left</span>`;
+        }
+      } else if (e.windowStatus === 'CLOSED') {
+        if (['SUBMITTED','GRADED'].includes(attStatus) && e.resultsReleased) {
+          ctaBtn = `<a href="exam-results.html?attemptId=${e.activeAttemptId}" class="btn btn-secondary">View Results</a>`;
+        } else if (['SUBMITTED','GRADED'].includes(attStatus)) {
+          ctaBtn = `<button class="btn btn-secondary" disabled>Results Pending</button>`;
+        }
+      } else if (attStatus === 'GRADED' && e.resultsReleased) {
+        ctaBtn = `<a href="exam-results.html?attemptId=${e.activeAttemptId}" class="btn btn-secondary">View Results</a>`;
+      }
+      if (!ctaBtn) ctaBtn = `<span class="btn btn-secondary" style="opacity:.5;cursor:default;">${e.windowStatus === 'NOT_OPEN' ? 'Not Open Yet' : 'Closed'}</span>`;
+
+      const fromDt = e.availableFrom ? new Date(e.availableFrom).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+      const toDt   = e.availableUntil ? new Date(e.availableUntil).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+
+      return `<div class="exam-card">
+          <div class="exam-card-header">
+            <div>
+              <div class="exam-card-course">${e.courseCode} · ${e.courseTitle}</div>
+              <div class="exam-card-title">${e.title}</div>
+            </div>
+            ${getWindowStatusBadge(e.windowStatus, e.status)}
+          </div>
+          <div class="exam-meta">
+            <span>⏱ ${e.timeLimitMinutes ? e.timeLimitMinutes + ' min' : 'Untimed'}</span>
+            <span>📊 ${e.totalMarks} marks</span>
+            <span>✅ Pass: ${e.passingGradePct}%</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);">
+            📅 ${fromDt} → ${toDt}
+          </div>
+          <div class="exam-card-footer">
+            <div class="attempts-info">
+              ${getAttemptStatusBadge(attStatus)}
+              <span style="font-size:11px;color:var(--text-muted);font-weight:600;">${used} used ${maxAtt}</span>
+            </div>
+            ${ctaBtn}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function startExam(examId) {
+    try {
+      const r = await apiCall(`/exam-attempts/start/${examId}`, { method: 'POST' });
+      window.location.href = `exam-take.html?attemptId=${r.data.attemptId}&examId=${examId}`;
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+
+  // ======= VIEW RESULTS =======
+  async function loadMyResults() {
+    const grid = document.getElementById('results-grid');
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+      <div class="empty-state-icon">🏆</div>
+      <p class="empty-state-title" style="font-size:18px;">Loading results…</p>
+    </div>`;
+
+    try {
+      const r = await apiCall('/exam-attempts/my-results');
+      const results = r.data || [];
+
+      if (!results.length) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+          <div class="empty-state-icon">🏆</div>
+          <p class="empty-state-title" style="font-size:18px;">No released results yet</p>
+          <p class="empty-state-subtitle">Results will appear here once your instructor releases them.</p>
+        </div>`;
+        return;
+      }
+
+      grid.innerHTML = results.map(r => renderResultCard(r)).join('');
+    } catch(e) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+        <p class="empty-state-title" style="color:var(--danger);font-size:16px;">Failed to load results: ${e.message}</p>
+      </div>`;
+    }
+  }
+
+  function renderResultCard(r) {
+    const pct      = r.percentage != null ? Number(r.percentage).toFixed(1) + '%' : '—';
+    const score    = r.totalScore  != null ? Number(r.totalScore).toFixed(1) : '—';
+    const marks    = r.totalMarks  != null ? Number(r.totalMarks).toFixed(1) : '—';
+    const isGraded = r.status === 'GRADED';
+
+    const cardClass = !isGraded ? 'pending-card' : (r.passed ? 'passed-card' : 'failed-card');
+
+    const passFail = isGraded
+      ? (r.passed
+          ? `<span class="badge badge-active" style="font-size:12px;padding:4px 12px;">✓ PASSED</span>`
+          : `<span class="badge badge-inactive" style="font-size:12px;padding:4px 12px;">✗ FAILED</span>`)
+      : `<span class="badge badge-draft" style="font-size:12px;padding:4px 12px;">⏳ Pending Grade</span>`;
+
+    const submittedDt = r.submittedAt
+      ? new Date(r.submittedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
+      : '—';
+    const fromDt = r.availableFrom
+      ? new Date(r.availableFrom).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
+      : '—';
+    const toDt = r.availableUntil
+      ? new Date(r.availableUntil).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
+      : '—';
+
+    const passingPct = r.passingGradePct != null ? Number(r.passingGradePct).toFixed(0) + '%' : '—';
+
+    return `<div class="result-summary-card ${cardClass}">
+      <div>
+        <div class="result-card-course">${r.courseCode} · ${r.courseTitle}</div>
+        <div class="result-card-title">${r.examTitle}</div>
+      </div>
+
+      <div class="score-display">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Score</div>
+          <div class="score-fraction">${score} <span>/ ${marks} marks</span></div>
+        </div>
+        <div class="score-pct">${pct}</div>
+      </div>
+
+      <div class="result-meta-row">
+        <span>⏱ ${r.timeLimitMinutes ? r.timeLimitMinutes + ' min' : 'Untimed'}</span>
+        <span>🎯 Pass: ${passingPct}</span>
+        <span>📅 ${fromDt} → ${toDt}</span>
+      </div>
+
+      <div class="result-card-footer">
+        <div>
+          ${passFail}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Submitted: ${submittedDt}</div>
+        </div>
+        <a href="exam-results.html?attemptId=${r.attemptId}" class="btn btn-primary" style="font-size:13px;">View Details →</a>
+      </div>
+    </div>`;
+  }
+
+  // ======= INSTRUCTOR / ADMIN =======
+  async function loadManageCourseFilter() {
+    try {
+      const url = role === 'ADMIN' ? '/courses/manage?page=0&size=100' : '/courses/manage?page=0&size=100';
+      const r = await apiCall(url);
+      const sel = document.getElementById('f-course');
+      (r.data.content || []).forEach(c => {
+        sel.innerHTML += `<option value="${c.id}">${c.title}</option>`;
+      });
+    } catch(e) {}
+  }
+
+  let debTimer;
+  function debounceLoad() { clearTimeout(debTimer); debTimer = setTimeout(() => loadManageExams(0), 400); }
+
+  async function loadManageExams(page) {
+    const search   = document.getElementById('f-search').value.trim();
+    const status   = document.getElementById('f-status').value;
+    const courseId = document.getElementById('f-course').value;
+    let url = `/exams/manage?page=${page}&size=20`;
+    if (search)   url += `&search=${encodeURIComponent(search)}`;
+    if (status)   url += `&status=${status}`;
+    if (courseId) url += `&courseId=${courseId}`;
+
+    const wrap = document.getElementById('manage-table-wrap');
+    wrap.innerHTML = '<p class="text-muted" style="padding:48px;text-align:center;">Loading…</p>';
+
+    try {
+      const r = await apiCall(url);
+      const { content, totalElements, totalPages, number } = r.data;
+
+      // Update stat bar
+      const all = content;
+      document.getElementById('stat-total').textContent   = totalElements;
+      document.getElementById('stat-active').textContent  = all.filter(e=>e.status==='ACTIVE').length;
+      document.getElementById('stat-draft').textContent   = all.filter(e=>e.status==='DRAFT').length;
+      document.getElementById('stat-pending').textContent = all.reduce((s,e)=>s+(e.pendingGradeCount||0),0);
+
+      if (!content.length) {
+        wrap.innerHTML = `<div class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <p class="empty-state-title" style="font-size:18px;">No exams found.</p>
+          </div>`;
+        document.getElementById('pagination').innerHTML = '';
+        return;
+      }
+
+      wrap.innerHTML = `<div class="table-wrapper"><table class="content-table" style="margin:0;">
+          <thead><tr>
+            <th style="padding-left:24px;">Exam Title</th><th>Course</th><th>Status</th>
+            <th>Window</th><th>Submissions</th><th>Pending Grades</th><th style="padding-right:24px;">Actions</th>
+          </tr></thead>
+          <tbody>${content.map(e => `<tr>
+            <td style="padding-left:24px;">
+              <div style="font-weight:600;color:var(--text-primary);">${e.title}</div>
+              <div style="font-size:11px;color:var(--text-muted);">${e.totalMarks} marks · ${e.timeLimitMinutes ? e.timeLimitMinutes+'min' : 'Untimed'}</div>
+            </td>
+            <td>
+              <div style="color:var(--text-body);font-weight:500;">${e.courseTitle}</div>
+              <div style="font-size:11px;color:var(--text-muted);">${e.courseCode}</div>
+            </td>
+            <td>${getExamStatusBadge(e.status)}</td>
+            <td style="font-size:12px;color:var(--text-muted);">
+              ${e.availableFrom ? new Date(e.availableFrom).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—'}
+              <br>→ ${e.availableUntil ? new Date(e.availableUntil).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—'}
+            </td>
+            <td style="text-align:center;font-weight:700;color:var(--text-body);">${e.submissionCount}</td>
+            <td style="text-align:center;">
+              ${e.pendingGradeCount > 0
+              ? `<span class="pending-badge">${e.pendingGradeCount}</span>`
+              : '<span style="color:var(--border-light);font-weight:700;">—</span>'}
+            </td>
+            <td style="padding-right:24px;">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                ${e.status === 'DRAFT'
+              ? `<a href="exam-builder.html?id=${e.id}" class="btn btn-sm btn-secondary">✏️ Edit</a>
+                     <button class="btn btn-sm btn-primary" onclick="publishExam(${e.id})">Publish</button>
+                     <button class="btn btn-sm btn-danger outline" onclick="deleteExam(${e.id})">🗑</button>`
+              : ''}
+                ${e.status === 'ACTIVE'
+              ? `<a href="exam-builder.html?id=${e.id}" class="btn btn-sm btn-secondary">View</a>
+                     <button class="btn btn-sm btn-secondary" onclick="deactivateExam(${e.id})">Deactivate</button>`
+              : ''}
+                ${e.status === 'DEACTIVATED'
+              ? `<button class="btn btn-sm btn-secondary" onclick="archiveExam(${e.id})">Archive</button>`
+              : ''}
+                ${e.submissionCount > 0
+              ? `<a href="exam-grade.html?examId=${e.id}" class="btn btn-sm btn-secondary">📋 Grade</a>
+                     <a href="exam-analytics.html?examId=${e.id}" class="btn btn-sm btn-secondary">📊 Analytics</a>`
+              : ''}
+              </div>
+            </td>
+          </tr>`).join('')}</tbody>
+        </table></div>`;
+
+      renderPagination(number, totalPages);
+    } catch(err) {
+      wrap.innerHTML = `<p style="padding:48px;color:var(--danger);text-align:center;">Error: ${err.message}</p>`;
+    }
+  }
+
+  function renderPagination(current, total) {
+    const el = document.getElementById('pagination');
+    el.innerHTML = '';
+    if (total <= 1) return;
+    
+    let html = `<div class="pagination-controls" style="margin:16px auto;">`;
+    
+    if (current > 0) {
+      html += `<button class="page-btn" onclick="loadManageExams(${current-1})">‹</button>`;
+    } else {
+      html += `<button class="page-btn" disabled>‹</button>`;
+    }
+    
+    html += `<div class="pagination-controls" style="margin:0 8px;">`;
+    for (let i = Math.max(0,current-2); i < Math.min(total, current+3); i++) {
+        html += `<button class="page-btn ${i===current?'active':''}" onclick="loadManageExams(${i})">${i+1}</button>`;
+    }
+    html += `</div>`;
+    
+    if (current < total-1) {
+      html += `<button class="page-btn" onclick="loadManageExams(${current+1})">›</button>`;
+    } else {
+      html += `<button class="page-btn" disabled>›</button>`;
+    }
+    
+    html += `</div>`;
+    el.innerHTML = html;
+  }
+
+  async function publishExam(id) {
+    if (!confirm('Publish this exam? Students will be able to see and take it.')) return;
+    try {
+      await apiCall(`/exams/${id}/publish`, { method: 'POST' });
+      showToast('Exam published!', 'success');
+      loadManageExams(0);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+  async function deactivateExam(id) {
+    if (!confirm('Deactivate this exam? No new attempts will be accepted.')) return;
+    try {
+      await apiCall(`/exams/${id}/deactivate`, { method: 'POST' });
+      showToast('Exam deactivated.', 'info');
+      loadManageExams(0);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+  async function archiveExam(id) {
+    if (!confirm('Archive this exam? It will be removed from student view.')) return;
+    try {
+      await apiCall(`/exams/${id}/archive`, { method: 'POST' });
+      showToast('Exam archived.', 'info');
+      loadManageExams(0);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+  async function deleteExam(id) {
+    if (!confirm('Permanently delete this exam? This cannot be undone.')) return;
+    try {
+      await apiCall(`/exams/${id}`, { method: 'DELETE' });
+      showToast('Exam deleted.', 'info');
+      loadManageExams(0);
+    } catch(e) { showToast(e.message, 'error'); }
+  }
+  function clearFilters() {
+    document.getElementById('f-search').value = '';
+    document.getElementById('f-status').value = '';
+    document.getElementById('f-course').value = '';
+    loadManageExams(0);
+  }
+</script>
+</body>
+</html>
