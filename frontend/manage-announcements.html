@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Announcements — Hi-Tech Institute LMS</title>
+    <meta name="description" content="Create, edit, and manage system-wide and course-specific announcements for the Hi-Tech Institute LMS.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+
+    <style>
+        /* ── Page-specific overrides ── */
+        .page-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .page-header-title {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-primary, #111827);
+            margin: 0 0 4px;
+        }
+        .page-header-sub {
+            font-size: 14px;
+            color: var(--text-muted, #9ca3af);
+        }
+
+        /* Stats strip */
+        .ann-stats {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .ann-stat-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px 20px;
+            box-shadow: 0 1px 6px rgba(0,0,0,.07);
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+        }
+        .ann-stat-chip span { font-size: 20px; font-weight: 800; color: #00529b; }
+
+        /* Two-column layout */
+        .ann-layout {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+        @media (max-width: 900px) {
+            .ann-layout { grid-template-columns: 1fr; }
+        }
+
+        /* Post form card */
+        .ann-form-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 1px 6px rgba(0,0,0,.07);
+            position: sticky;
+            top: 90px;
+        }
+        .ann-form-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #00529b;
+            margin: 0 0 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* List card */
+        .ann-list-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 0;
+            box-shadow: 0 1px 6px rgba(0,0,0,.07);
+            overflow: hidden;
+        }
+        .ann-list-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 24px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .ann-list-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        /* Filter tabs */
+        .ann-tabs {
+            display: flex;
+            gap: 6px;
+        }
+        .ann-tab {
+            padding: 5px 14px;
+            border-radius: 20px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .ann-tab.active, .ann-tab:hover {
+            background: #00529b;
+            color: #fff;
+            border-color: #00529b;
+        }
+
+        /* Individual announcement row */
+        .ann-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 18px 24px;
+            border-bottom: 1px solid #f9fafb;
+            transition: background .12s;
+        }
+        .ann-row:last-child { border-bottom: none; }
+        .ann-row:hover { background: #fafbff; }
+
+        .ann-row-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .ann-row-icon.system { background: #eff6ff; }
+        .ann-row-icon.course { background: #ecfdf5; }
+
+        .ann-row-body { flex: 1; min-width: 0; }
+        .ann-row-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #111827;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .ann-row-msg {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
+        }
+        .ann-row-meta {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 6px;
+        }
+
+        .ann-row-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+            align-items: center;
+        }
+
+        /* Edit modal overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 9000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-box {
+            background: #fff;
+            border-radius: 18px;
+            padding: 28px 32px;
+            max-width: 560px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,.2);
+            animation: popIn .2s ease;
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(.95); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        .modal-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 20px;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        /* Empty state */
+        .ann-empty-state {
+            padding: 60px 24px;
+            text-align: center;
+        }
+        .ann-empty-state-icon { font-size: 40px; margin-bottom: 12px; }
+        .ann-empty-state-msg { font-size: 14px; color: #9ca3af; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<main class="container page-content">
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb" style="margin-bottom:22px;">
+        <a href="dashboard.html">Dashboard</a>
+        <span class="breadcrumb-sep">/</span>
+        <span>Manage Announcements</span>
+    </div>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-header-title">📢 Manage Announcements</h1>
+            <p class="page-header-sub">Post system-wide or course-specific announcements for students.</p>
+        </div>
+    </div>
+
+    <!-- Stats Strip -->
+    <div class="ann-stats">
+        <div class="ann-stat-chip">📣 System-wide <span id="stat-system">—</span></div>
+        <div class="ann-stat-chip">📚 Course-specific <span id="stat-course">—</span></div>
+        <div class="ann-stat-chip">📋 Total <span id="stat-total">—</span></div>
+    </div>
+
+    <!-- Two-column layout: form LEFT | list RIGHT -->
+    <div class="ann-layout">
+
+        <!-- LEFT: Post/Edit Form -->
+        <div class="ann-form-card">
+            <div class="ann-form-title">
+                <span id="form-mode-icon">✏️</span>
+                <span id="form-mode-label">New Announcement</span>
+            </div>
+
+            <!-- Hidden edit ID -->
+            <input type="hidden" id="edit-ann-id">
+
+            <div class="form-group">
+                <label class="form-label">Title <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="ann-title" class="form-control"
+                       placeholder="Short, attention-grabbing headline..." maxlength="200">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Target Audience <span style="color:#ef4444;">*</span></label>
+                <select id="ann-type-select" class="form-control" onchange="onTypeChange()">
+                    <option value="SYSTEM">📣 All Students (System-wide)</option>
+                    <option value="COURSE">📚 Specific Course</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="course-select-group" style="display:none;">
+                <label class="form-label">Course <span style="color:#ef4444;">*</span></label>
+                <select id="ann-course-id" class="form-control">
+                    <option value="">Loading courses...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Message <span style="color:#ef4444;">*</span></label>
+                <textarea id="ann-message" class="form-control" rows="5"
+                          placeholder="Write your announcement message here..."></textarea>
+                <div style="font-size:11px;color:#9ca3af;margin-top:4px;">
+                    <span id="char-count">0</span> characters
+                </div>
+            </div>
+
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-primary" id="ann-submit-btn" onclick="submitAnnouncement()"
+                        style="flex:1;">Post Announcement</button>
+                <button class="btn btn-secondary" id="ann-cancel-edit-btn"
+                        onclick="resetForm()" style="display:none;">Cancel Edit</button>
+            </div>
+        </div>
+
+        <!-- RIGHT: Announcements List -->
+        <div>
+            <div class="ann-list-card">
+                <div class="ann-list-header">
+                    <span class="ann-list-title">All Announcements</span>
+                    <div class="ann-tabs">
+                        <button class="ann-tab active" data-filter="ALL" onclick="setFilter('ALL', this)">All</button>
+                        <button class="ann-tab" data-filter="SYSTEM" onclick="setFilter('SYSTEM', this)">System-wide</button>
+                        <button class="ann-tab" data-filter="COURSE" onclick="setFilter('COURSE', this)">Course</button>
+                    </div>
+                </div>
+
+                <div id="ann-list-body">
+                    <div class="ann-empty-state">
+                        <div class="ann-empty-state-icon">⏳</div>
+                        <div class="ann-empty-state-msg">Loading announcements...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <div class="footer-copy">© 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="support.html">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script>
+    requireAuth();
+    buildNavbar('dashboard');
+
+    // Only Admins should access this page
+    const role = getUserRole();
+    if (role !== 'ADMIN') {
+        showToast('Access denied. Admins only.', 'error');
+        setTimeout(() => window.location.href = 'dashboard.html', 1500);
+    }
+
+    // ── State ──
+    let _allAnnouncements = [];
+    let _courses          = [];
+    let _activeFilter     = 'ALL';
+
+    // ── Boot ──
+    (async function init() {
+        await Promise.all([loadCourses(), loadAnnouncements()]);
+    })();
+
+    // ── Load all courses for the dropdown ──
+    async function loadCourses() {
+        try {
+            const res = await apiCall('/courses/manage?page=0&size=200');
+            _courses = res.data.content || [];
+            const sel = document.getElementById('ann-course-id');
+            sel.innerHTML = '<option value="">— Select a course —</option>' +
+                _courses.map(c => `<option value="${c.id}">${c.title} (${c.courseCode})</option>`).join('');
+        } catch (e) { console.error('Course load error:', e); }
+    }
+
+    // ── Load announcements ──
+    async function loadAnnouncements() {
+        try {
+            const res = await apiCall('/announcements/manage');
+            _allAnnouncements = res.data || [];
+            updateStats();
+            renderList();
+        } catch (e) {
+            document.getElementById('ann-list-body').innerHTML =
+                '<div class="ann-empty-state"><div class="ann-empty-state-icon">⚠️</div><div class="ann-empty-state-msg">Failed to load announcements.</div></div>';
+        }
+    }
+
+    function updateStats() {
+        const system = _allAnnouncements.filter(a => a.type === 'SYSTEM').length;
+        const course = _allAnnouncements.filter(a => a.type === 'COURSE').length;
+        document.getElementById('stat-system').textContent = system;
+        document.getElementById('stat-course').textContent = course;
+        document.getElementById('stat-total').textContent  = _allAnnouncements.length;
+    }
+
+    // ── Render filtered list ──
+    function renderList() {
+        const filtered = _activeFilter === 'ALL'
+            ? _allAnnouncements
+            : _allAnnouncements.filter(a => a.type === _activeFilter);
+
+        const body = document.getElementById('ann-list-body');
+
+        if (!filtered.length) {
+            body.innerHTML = `
+                <div class="ann-empty-state">
+                    <div class="ann-empty-state-icon">📭</div>
+                    <div class="ann-empty-state-msg">No announcements found. Use the form to post one.</div>
+                </div>`;
+            return;
+        }
+
+        body.innerHTML = filtered.map(a => {
+            const isSystem = a.type === 'SYSTEM';
+            const typeBadge = isSystem
+                ? '<span class="announcement-badge badge-system">📣 System-wide</span>'
+                : `<span class="announcement-badge badge-course">${escHtml(a.courseCode || 'Course')}</span>`;
+
+            return `
+            <div class="ann-row" id="ann-row-${a.id}">
+                <div class="ann-row-icon ${isSystem ? 'system' : 'course'}">
+                    ${isSystem ? '📣' : '📚'}
+                </div>
+                <div class="ann-row-body">
+                    <div class="ann-row-title">${escHtml(a.title)}</div>
+                    <div style="margin-bottom:4px;">${typeBadge}</div>
+                    <div class="ann-row-msg">${escHtml(a.message)}</div>
+                    <div class="ann-row-meta">
+                        Posted by <strong>${escHtml(a.authorName)}</strong>
+                        ${a.courseTitle ? `· <em>${escHtml(a.courseTitle)}</em>` : ''}
+                        · ${formatDateTime(a.createdAt)}
+                    </div>
+                </div>
+                <div class="ann-row-actions">
+                    <button class="btn btn-sm btn-outline" onclick="startEdit(${a.id})" title="Edit">
+                        ✏️ Edit
+                    </button>
+                    <button class="btn btn-sm" onclick="deleteAnn(${a.id})"
+                            style="background:#fee2e2;color:#dc2626;border:none;" title="Delete">
+                        🗑 Delete
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // ── Filter tabs ──
+    function setFilter(filter, btn) {
+        _activeFilter = filter;
+        document.querySelectorAll('.ann-tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        renderList();
+    }
+
+    // ── Type select toggle ──
+    function onTypeChange() {
+        const val = document.getElementById('ann-type-select').value;
+        document.getElementById('course-select-group').style.display =
+            val === 'COURSE' ? 'block' : 'none';
+    }
+
+    // ── Character counter ──
+    document.getElementById('ann-message').addEventListener('input', function() {
+        document.getElementById('char-count').textContent = this.value.length;
+    });
+
+    // ── Submit (create or update) ──
+    async function submitAnnouncement() {
+        const editId  = document.getElementById('edit-ann-id').value;
+        const title   = document.getElementById('ann-title').value.trim();
+        const message = document.getElementById('ann-message').value.trim();
+        const type    = document.getElementById('ann-type-select').value;
+        const courseIdRaw = document.getElementById('ann-course-id').value;
+
+        if (!title) { showToast('Title is required.', 'error'); return; }
+        if (!message) { showToast('Message is required.', 'error'); return; }
+        if (type === 'COURSE' && !courseIdRaw) {
+            showToast('Please select a course.', 'error'); return;
+        }
+
+        const courseId = (type === 'COURSE' && courseIdRaw) ? Number(courseIdRaw) : null;
+        const btn = document.getElementById('ann-submit-btn');
+        setLoading(btn, true, editId ? 'Saving...' : 'Posting...');
+
+        try {
+            if (editId) {
+                // Currently backend only supports create + delete.
+                // We simulate "edit" by deleting old + creating new.
+                await apiCall(`/announcements/${editId}`, { method: 'DELETE' });
+            }
+            await apiCall('/announcements', {
+                method: 'POST',
+                body: { title, message, courseId }
+            });
+            showToast(editId ? 'Announcement updated!' : 'Announcement posted!', 'success');
+            resetForm();
+            await loadAnnouncements();
+        } catch (e) {
+            showToast(e.message || 'Action failed.', 'error');
+        } finally {
+            setLoading(btn, false);
+        }
+    }
+
+    // ── Populate form for editing ──
+    function startEdit(id) {
+        const ann = _allAnnouncements.find(a => a.id === id);
+        if (!ann) return;
+
+        document.getElementById('edit-ann-id').value        = ann.id;
+        document.getElementById('ann-title').value           = ann.title;
+        document.getElementById('ann-message').value         = ann.message;
+        document.getElementById('char-count').textContent    = ann.message.length;
+        document.getElementById('ann-type-select').value     = ann.type;
+        onTypeChange();
+
+        if (ann.type === 'COURSE' && ann.courseId) {
+            document.getElementById('ann-course-id').value = ann.courseId;
+        }
+
+        // Update form header
+        document.getElementById('form-mode-icon').textContent  = '✏️';
+        document.getElementById('form-mode-label').textContent = 'Edit Announcement';
+        document.getElementById('ann-submit-btn').textContent  = 'Save Changes';
+        document.getElementById('ann-cancel-edit-btn').style.display = 'inline-flex';
+
+        // Scroll form into view on mobile
+        document.querySelector('.ann-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Reset form to create mode ──
+    function resetForm() {
+        document.getElementById('edit-ann-id').value            = '';
+        document.getElementById('ann-title').value              = '';
+        document.getElementById('ann-message').value            = '';
+        document.getElementById('char-count').textContent       = '0';
+        document.getElementById('ann-type-select').value        = 'SYSTEM';
+        document.getElementById('ann-course-id').value          = '';
+        document.getElementById('course-select-group').style.display = 'none';
+        document.getElementById('form-mode-icon').textContent   = '✏️';
+        document.getElementById('form-mode-label').textContent  = 'New Announcement';
+        document.getElementById('ann-submit-btn').textContent   = 'Post Announcement';
+        document.getElementById('ann-cancel-edit-btn').style.display = 'none';
+    }
+
+    // ── Delete ──
+    async function deleteAnn(id) {
+        if (!confirm('Delete this announcement? Students will no longer see it.')) return;
+        try {
+            await apiCall(`/announcements/${id}`, { method: 'DELETE' });
+            showToast('Announcement deleted.', 'success');
+            // Animate out the row
+            const row = document.getElementById(`ann-row-${id}`);
+            if (row) {
+                row.style.transition = 'opacity .3s, max-height .3s';
+                row.style.opacity = '0';
+                row.style.maxHeight = '0';
+                row.style.overflow = 'hidden';
+                setTimeout(() => { row.remove(); updateStats(); }, 320);
+            }
+            // Remove from local state
+            _allAnnouncements = _allAnnouncements.filter(a => a.id !== id);
+            updateStats();
+            // If we were editing this one, reset the form
+            if (document.getElementById('edit-ann-id').value == id) resetForm();
+        } catch (e) {
+            showToast(e.message || 'Failed to delete.', 'error');
+        }
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Form — Hi-Tech LMS</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    .recurrence-panel {
+      display: none;
+      background: var(--page-bg);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 16px;
+    }
+    .recurrence-panel.show { display: block; }
+
+    .day-checkboxes { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+    .day-cb { display: none; }
+    .day-label {
+      width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--border-subtle);
+      background: var(--card-bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; cursor: pointer; color: var(--text-muted);
+      transition: all .2s;
+    }
+    .day-cb:checked + .day-label {
+      background: var(--brand-primary); border-color: var(--brand-primary); color: #fff;
+    }
+    .day-label:hover { border-color:var(--brand-primary); color:var(--brand-primary); }
+    .day-cb:checked + .day-label:hover { color:#fff; }
+
+    .conflict-banner {
+      display: none; background: #fefce8; border: 1px solid #fef08a;
+      border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;
+      color: #854d0e; font-size: 14px; font-weight:500;
+    }
+    .conflict-banner.show { display: flex; gap: 16px; align-items: flex-start; }
+
+    .recurrence-preview {
+      background: #f0f9ff; border:1px solid #bae6fd; border-radius: 8px; padding: 12px 16px;
+      font-size: 14px; font-weight:600; color: #0369a1; margin-top: 20px; display: none;
+    }
+    .recurrence-preview.show { display: block; }
+
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-bottom:20px; }
+    .two-col   { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom:20px; }
+    @media(max-width:768px) { .three-col,.two-col { grid-template-columns:1fr; gap:16px; margin-bottom:16px; } }
+
+    /* ── Class-type toggle ── */
+    .class-type-toggle {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      overflow: hidden;
+      width: fit-content;
+      margin-bottom: 24px;
+      background:var(--page-bg);
+    }
+    .class-type-toggle input[type="radio"] { display: none; }
+    .class-type-toggle label {
+      padding: 12px 24px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+      border-right: 1px solid var(--border-subtle);
+      transition: background .15s, color .15s;
+      user-select: none;
+    }
+    .class-type-toggle label:hover { color:var(--text-primary); }
+    .class-type-toggle label:last-of-type { border-right: none; }
+    .class-type-toggle input[type="radio"]:checked + label {
+      background: var(--brand-primary);
+      color: #fff;
+    }
+
+    /* Smooth show/hide for mode panels */
+    .mode-panel { display: none; }
+    .mode-panel.active { display: block; }
+
+    .section-title { font-size: 18px; font-weight: 800; color: var(--text-primary); margin: 32px 0 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border-light); }
+    .section-title:first-of-type { margin-top:0; }
+  </style>
+</head>
+<body>
+<nav class="navbar" id="main-navbar"></nav>
+<div id="toast-container"></div>
+
+<main class="container page-content" style="max-width:900px;">
+  <!-- Breadcrumb -->
+  <div class="breadcrumb" style="margin-bottom:24px;">
+    <a href="dashboard.html">Dashboard</a> <span class="breadcrumb-sep">/</span>
+    <a href="schedule.html">Schedule</a> <span class="breadcrumb-sep">/</span>
+    <span style="font-weight:600;color:var(--text-primary);" id="breadcrumb-label">Create Session</span>
+  </div>
+
+  <div class="content-card" style="padding:40px;">
+    <h2 style="font-size:24px;font-weight:800;color:var(--text-primary);margin-bottom:32px;" id="form-title">Create Class Session</h2>
+
+    <!-- Conflict warning banner -->
+    <div class="conflict-banner" id="conflict-banner">
+      <span style="font-size:24px;">⚠️</span>
+      <div>
+        <strong style="font-size:16px;color:#713f12;display:block;margin-bottom:8px;">Scheduling Conflict Detected</strong>
+        <div id="conflict-msg"></div>
+        <div style="margin-top:12px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;">
+            <input type="checkbox" id="override-conflict"> Override and save anyway
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- General error banner -->
+    <div class="alert alert-danger hidden" id="error-banner" style="margin-bottom:24px;">
+      <span class="alert-icon">⚠️</span><span id="error-text"></span>
+    </div>
+
+    <form id="session-form" novalidate>
+
+      <!-- Section: Course & Instructor -->
+      <div class="section-title">Session Details</div>
+
+      <div class="two-col">
+        <div class="form-group">
+          <label class="form-label" for="courseId">Course *</label>
+          <select id="courseId" name="courseId" class="form-control"
+                  onchange="loadInstructorsForCourse()">
+            <option value="">Select course…</option>
+          </select>
+          <div class="form-error" id="courseId-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="instructorId">Instructor *</label>
+          <select id="instructorId" name="instructorId" class="form-control"
+                  onchange="triggerConflictCheck()">
+            <option value="">Select course first…</option>
+          </select>
+          <div class="form-error" id="instructorId-error"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="title">Session Title / Topic *</label>
+        <input type="text" id="title" name="title" class="form-control"
+               placeholder="e.g. Introduction to Java Variables">
+        <div class="form-error" id="title-error"></div>
+      </div>
+
+      <!-- Section: Date & Time -->
+      <div class="section-title">Date &amp; Time</div>
+      <div class="three-col">
+        <div class="form-group">
+          <label class="form-label" for="sessionDate">Date *</label>
+          <input type="text" id="sessionDate" name="sessionDate" class="form-control" placeholder="Select date...">
+          <div class="form-error" id="sessionDate-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="startTime">Start Time *</label>
+          <input type="text" id="startTime" name="startTime" class="form-control" placeholder="--:--">
+          <div class="form-error" id="startTime-error"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="endTime">End Time *</label>
+          <input type="text" id="endTime" name="endTime" class="form-control" placeholder="--:--">
+          <div class="form-error" id="endTime-error"></div>
+        </div>
+      </div>
+
+      <!-- Section: Class Type & Location/Meeting Details -->
+      <div class="section-title">Class Details</div>
+
+      <!-- Online / Physical toggle -->
+      <div class="class-type-toggle" role="group" aria-label="Class type">
+        <input type="radio" id="classTypeOnline"  name="classType" value="ONLINE"   checked
+               onchange="onClassTypeChange()">
+        <label for="classTypeOnline">🌐 Online</label>
+
+        <input type="radio" id="classTypePhysical" name="classType" value="PHYSICAL"
+               onchange="onClassTypeChange()">
+        <label for="classTypePhysical">🏫 Physical</label>
+      </div>
+
+      <!-- ── ONLINE panel ── -->
+      <div id="online-panel" class="mode-panel active">
+        <div class="two-col">
+          <div class="form-group">
+            <label class="form-label" for="meetingPlatform">Platform *</label>
+            <select id="meetingPlatform" name="meetingPlatform" class="form-control">
+              <option value="ZOOM">Zoom</option>
+              <option value="TEAMS">Microsoft Teams</option>
+              <option value="GOOGLE_MEET">Google Meet</option>
+              <option value="CUSTOM">Custom URL</option>
+            </select>
+            <div class="form-error" id="meetingPlatform-error"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="meetingLink">Meeting Link *</label>
+            <input type="url" id="meetingLink" name="meetingLink" class="form-control"
+                   placeholder="https://zoom.us/j/...">
+            <div class="form-hint">Must start with https://</div>
+            <div class="form-error" id="meetingLink-error"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PHYSICAL panel ── -->
+      <div id="physical-panel" class="mode-panel">
+        <div class="form-group">
+          <label class="form-label" for="classLocation">Class Location *</label>
+          <input type="text" id="classLocation" name="classLocation" class="form-control"
+                 placeholder="e.g. Room 204, Main Building or City Hall Auditorium">
+          <div class="form-hint">Enter the classroom, hall, or venue where the session will be held.</div>
+          <div class="form-error" id="classLocation-error"></div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label" for="notes">Notes for Students <span style="color:var(--text-muted);font-weight:500;">(Optional)</span></label>
+        <textarea id="notes" name="notes" class="form-control" rows="3"
+                  placeholder="Any instructions or preparation notes for enrolled students…"
+                  style="resize:vertical;"></textarea>
+      </div>
+
+      <!-- Section: Recurrence (create mode only) -->
+      <div id="recurrence-section">
+        <div class="section-title">Recurrence</div>
+        <div class="form-group">
+          <div class="checkbox-group">
+            <input type="checkbox" id="recurring" name="recurring"
+                   onchange="toggleRecurrence(this.checked)">
+            <label for="recurring" style="font-weight:700;">Make this a recurring session</label>
+          </div>
+        </div>
+
+        <div class="recurrence-panel" id="recurrence-panel">
+          <div class="two-col" style="margin-bottom:0;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" for="recurrenceFrequency">Frequency *</label>
+              <select id="recurrenceFrequency" class="form-control"
+                      onchange="onFrequencyChange()">
+                <option value="DAILY">Daily</option>
+                <option value="WEEKLY" selected>Weekly</option>
+                <option value="BIWEEKLY">Bi-weekly</option>
+                <option value="MONTHLY">Monthly</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" for="repeatUntil">Repeat Until *</label>
+              <input type="text" id="repeatUntil" class="form-control" placeholder="Select date...">
+              <div class="form-hint">Max 12 months ahead</div>
+            </div>
+          </div>
+
+          <!-- Day of week checkboxes (shown for WEEKLY / BIWEEKLY) -->
+          <div id="days-of-week-section" style="margin-top:24px;">
+            <label class="form-label">Days of Week *</label>
+            <div class="day-checkboxes">
+              <div>
+                <input type="checkbox" class="day-cb" id="day-MON" value="MON" onchange="updatePreview()">
+                <label class="day-label" for="day-MON">M</label>
+              </div>
+              <div>
+                <input type="checkbox" class="day-cb" id="day-TUE" value="TUE" onchange="updatePreview()">
+                <label class="day-label" for="day-TUE">T</label>
+              </div>
+              <div>
+                <input type="checkbox" class="day-cb" id="day-WED" value="WED" onchange="updatePreview()">
+                <label class="day-label" for="day-WED">W</label>
+              </div>
+              <div>
+                <input type="checkbox" class="day-cb" id="day-THU" value="THU" onchange="updatePreview()">
+                <label class="day-label" for="day-THU">T</label>
+              </div>
+              <div>
+                <input type="checkbox" class="day-cb" id="day-FRI" value="FRI" onchange="updatePreview()">
+                <label class="day-label" for="day-FRI">F</label>
+              </div>
+              <div>
+                <input type="checkbox" class="day-cb" id="day-SAT" value="SAT" onchange="updatePreview()">
+                <label class="day-label" for="day-SAT">S</label>
+              </div>
+              <div>
+                <input type="checkbox" class="day-cb" id="day-SUN" value="SUN" onchange="updatePreview()">
+                <label class="day-label" for="day-SUN">S</label>
+              </div>
+            </div>
+            <div class="form-error" id="daysOfWeek-error"></div>
+          </div>
+
+          <div class="recurrence-preview" id="recurrence-preview"></div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="margin-top:40px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; padding-top:24px; border-top:1px solid var(--border-light);">
+        <button type="submit" class="btn btn-primary" id="save-btn" style="padding:12px 24px;">
+          Create Session
+        </button>
+        <a href="schedule.html" class="btn btn-secondary outline" style="padding:12px 24px;">Cancel</a>
+        <!-- Delete button (edit mode only) -->
+        <button type="button" class="btn btn-danger hidden" id="delete-btn"
+                onclick="confirmDelete()" style="margin-left:auto; padding:12px 24px;">
+          🗑 Delete
+        </button>
+      </div>
+    </form>
+  </div>
+</main>
+
+<!-- Edit scope modal -->
+<div class="modal-overlay" id="scope-modal">
+  <div class="modal" style="max-width:400px; padding:32px; text-align:center;">
+    <h3 style="font-size:22px;font-weight:800;color:var(--text-primary);margin-bottom:12px;">Save Changes</h3>
+    <p style="font-size:15px;color:var(--text-muted);margin-bottom:28px;line-height:1.5;">This session is part of a series. Apply changes to:</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <button class="btn btn-primary" onclick="submitWithScope('THIS_ONLY')" style="padding:14px;justify-content:center;">Only this session</button>
+      <button class="btn btn-primary" onclick="submitWithScope('THIS_AND_FUTURE')" style="padding:14px;justify-content:center;">This and all future</button>
+      <button class="btn btn-primary" onclick="submitWithScope('ALL')" style="padding:14px;justify-content:center;">All sessions in series</button>
+      <button class="btn btn-secondary outline" onclick="closeScopeModal()" style="margin-top:8px;border:none;color:var(--text-muted);">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete scope modal -->
+<div class="modal-overlay" id="delete-scope-modal">
+  <div class="modal" style="max-width:400px; padding:32px; text-align:center;">
+    <h3 style="font-size:22px;font-weight:800;color:var(--danger);margin-bottom:12px;">Delete Session</h3>
+    <p style="font-size:15px;color:var(--text-muted);margin-bottom:28px;line-height:1.5;">Which sessions would you like to delete?</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <button class="btn btn-danger" onclick="confirmDeleteWithScope('THIS_ONLY')" style="padding:14px;justify-content:center;">Only this session</button>
+      <button class="btn btn-danger" onclick="confirmDeleteWithScope('THIS_AND_FUTURE')" style="padding:14px;justify-content:center;">This and all future</button>
+      <button class="btn btn-danger" onclick="confirmDeleteWithScope('ALL')" style="padding:14px;justify-content:center;">All sessions in series</button>
+      <button class="btn btn-secondary outline" onclick="closeDeleteScopeModal()" style="margin-top:8px;border:none;color:var(--text-muted);">Go back</button>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer" style="margin-top:60px;">
+  <div class="container">
+      <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+      <div class="footer-links">
+          <a href="#">Support</a>
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+      </div>
+  </div>
+</footer>
+
+<script src="js/common.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  requireAuth();
+  if (getUserRole() !== 'ADMIN') { window.location.href = 'dashboard.html'; }
+  buildNavbar('schedule');
+
+  const params  = new URLSearchParams(window.location.search);
+  const editId  = params.get('id');
+  const isEdit  = !!editId;
+  let editSession = null;
+  let conflictDetected = false;
+  let conflictCheckTimer = null;
+
+  if (isEdit) {
+    document.getElementById('breadcrumb-label').textContent = 'Edit Session';
+    document.getElementById('form-title').textContent = 'Edit Class Session';
+    document.getElementById('save-btn').textContent  = 'Save Changes';
+    document.getElementById('recurrence-section').style.display = 'none';
+    document.getElementById('delete-btn').classList.remove('hidden');
+
+    // Disable Course selection since the course should remain fixed for an existing session
+    const courseSelect = document.getElementById('courseId');
+    courseSelect.disabled = true;
+    courseSelect.style.backgroundColor = 'var(--page-bg)';
+    courseSelect.style.cursor = 'not-allowed';
+
+    // Disable Instructor selection as well
+    const instructorSelect = document.getElementById('instructorId');
+    instructorSelect.disabled = true;
+    instructorSelect.style.backgroundColor = 'var(--page-bg)';
+    instructorSelect.style.cursor = 'not-allowed';
+
+    loadSessionForEdit();
+  }
+
+  // Load active courses if not edit mode
+  if (!isEdit) {
+    (async () => {
+      try {
+        const resp = await apiCall('/courses/manage?page=0&size=100&status=ACTIVE');
+        const courses = resp.data.content || [];
+        const sel = document.getElementById('courseId');
+        courses.forEach(c => {
+          sel.innerHTML += `<option value="${c.id}">${c.title} (${c.courseCode})</option>`;
+        });
+        // Restore from URL param
+        if (params.get('courseId')) {
+          sel.value = params.get('courseId');
+          await loadInstructorsForCourse();
+        }
+      } catch(e) {}
+    })();
+  }
+
+  // Initialize custom Flatpickr pickers
+  const sessionDateFP = flatpickr("#sessionDate", {
+    dateFormat: "Y-m-d",
+    minDate: "today",
+    onChange: triggerConflictCheck
+  });
+  const startTimeFP = flatpickr("#startTime", {
+    enableTime: true,
+    noCalendar: true,
+    dateFormat: "H:i",
+    time_24hr: true,
+    onChange: triggerConflictCheck
+  });
+  const endTimeFP = flatpickr("#endTime", {
+    enableTime: true,
+    noCalendar: true,
+    dateFormat: "H:i",
+    time_24hr: true,
+    onChange: triggerConflictCheck
+  });
+  const repeatUntilFP = flatpickr("#repeatUntil", {
+    dateFormat: "Y-m-d",
+    minDate: "today",
+    onChange: updatePreview
+  });
+
+  // ============================================================
+  // CLASS TYPE TOGGLE
+  // ============================================================
+  function onClassTypeChange() {
+    const isOnline = getClassType() === 'ONLINE';
+    document.getElementById('online-panel').classList.toggle('active', isOnline);
+    document.getElementById('physical-panel').classList.toggle('active', !isOnline);
+
+    // Clear field errors from the hidden panel so they don't block submit
+    if (isOnline) {
+      clearFieldError(document.getElementById('classLocation'));
+    } else {
+      clearFieldError(document.getElementById('meetingLink'));
+      clearFieldError(document.getElementById('meetingPlatform'));
+    }
+  }
+
+  function getClassType() {
+    return document.querySelector('input[name="classType"]:checked')?.value || 'ONLINE';
+  }
+
+  function setClassType(value) {
+    const radio = document.querySelector(`input[name="classType"][value="${value}"]`);
+    if (radio) { radio.checked = true; onClassTypeChange(); }
+  }
+
+  // ============================================================
+  // LOAD INSTRUCTORS FOR SELECTED COURSE
+  // ============================================================
+  async function loadInstructorsForCourse() {
+    const courseId = document.getElementById('courseId').value;
+    const sel = document.getElementById('instructorId');
+    sel.innerHTML = '<option value="">Loading…</option>';
+    if (!courseId) { sel.innerHTML = '<option value="">Select course first…</option>'; return; }
+
+    try {
+      const resp = await apiCall(`/courses/${courseId}`);
+      const instructors = resp.data.instructors || [];
+      if (!instructors.length) {
+        sel.innerHTML = '<option value="">No instructors assigned to this course</option>';
+        return;
+      }
+      sel.innerHTML = '<option value="">Select instructor…</option>';
+      instructors.forEach(i => {
+        sel.innerHTML += `<option value="${i.id}">${i.fullName} — ${i.email}</option>`;
+      });
+      if (editSession) sel.value = editSession.instructorId;
+    } catch(e) {
+      sel.innerHTML = '<option value="">Error loading instructors</option>';
+    }
+  }
+
+  // ============================================================
+  // CONFLICT CHECK (debounced)
+  // ============================================================
+  function triggerConflictCheck() {
+    clearTimeout(conflictCheckTimer);
+    conflictCheckTimer = setTimeout(runConflictCheck, 600);
+    updatePreview();
+  }
+
+  async function runConflictCheck() {
+    const instructorId = document.getElementById('instructorId').value;
+    const sessionDate  = document.getElementById('sessionDate').value;
+    const startTime    = document.getElementById('startTime').value;
+    const endTime      = document.getElementById('endTime').value;
+
+    if (!instructorId || !sessionDate || !startTime || !endTime) return;
+    if (endTime <= startTime) return;
+
+    try {
+      const resp = await apiCall('/schedule/check-conflict', {
+        method: 'POST',
+        body: {
+          instructorId: parseInt(instructorId),
+          sessionDate, startTime, endTime,
+          excludeSessionId: editId ? parseInt(editId) : null
+        }
+      });
+      const result = resp.data;
+      conflictDetected = result.hasConflict;
+      const banner = document.getElementById('conflict-banner');
+      if (result.hasConflict) {
+        document.getElementById('conflict-msg').textContent = result.conflictMessage;
+        banner.classList.add('show');
+      } else {
+        banner.classList.remove('show');
+      }
+    } catch(e) { /* silently ignore */ }
+  }
+
+  // ============================================================
+  // RECURRENCE TOGGLE & PREVIEW
+  // ============================================================
+  function toggleRecurrence(on) {
+    document.getElementById('recurrence-panel').classList.toggle('show', on);
+    if (on) updatePreview();
+  }
+
+  function onFrequencyChange() {
+    const freq = document.getElementById('recurrenceFrequency').value;
+    const showDays = freq === 'WEEKLY' || freq === 'BIWEEKLY';
+    document.getElementById('days-of-week-section').style.display = showDays ? 'block' : 'none';
+    updatePreview();
+  }
+
+  function updatePreview() {
+    const recurring = document.getElementById('recurring').checked;
+    const preview   = document.getElementById('recurrence-preview');
+    if (!recurring) { preview.classList.remove('show'); return; }
+
+    const startDate   = document.getElementById('sessionDate').value;
+    const repeatUntil = document.getElementById('repeatUntil').value;
+    const freq = document.getElementById('recurrenceFrequency').value;
+
+    if (!startDate || !repeatUntil) { preview.classList.remove('show'); return; }
+
+    const start = new Date(startDate), end = new Date(repeatUntil);
+    if (end <= start) { preview.classList.remove('show'); return; }
+
+    let count = 0;
+    const diff = (end - start) / (1000*60*60*24);
+    if (freq === 'DAILY')    count = Math.floor(diff) + 1;
+    else if (freq === 'WEEKLY')   count = Math.ceil(diff / 7);
+    else if (freq === 'BIWEEKLY') count = Math.ceil(diff / 14);
+    else if (freq === 'MONTHLY')  count = Math.ceil(diff / 30);
+
+    const selectedDays = Array.from(document.querySelectorAll('.day-cb:checked')).length;
+    if ((freq === 'WEEKLY' || freq === 'BIWEEKLY') && selectedDays > 0) count *= selectedDays;
+
+    preview.textContent = `📅 This will create approximately ${count} session${count !== 1 ? 's' : ''}.`;
+    preview.classList.add('show');
+  }
+
+  // ============================================================
+  // LOAD SESSION FOR EDIT
+  // ============================================================
+  async function loadSessionForEdit() {
+    try {
+      const resp = await apiCall(`/schedule/${editId}`);
+      editSession = resp.data;
+      const s = editSession;
+
+      document.getElementById('title').value       = s.title;
+      sessionDateFP.setDate(s.sessionDate);
+      startTimeFP.setDate(s.startTime);
+      endTimeFP.setDate(s.endTime);
+      document.getElementById('notes').value       = s.notes || '';
+      
+      const courseSel = document.getElementById('courseId');
+      courseSel.innerHTML = `<option value="${s.courseId}">${s.courseTitle} (${s.courseCode})</option>`;
+      courseSel.value = s.courseId;
+
+      const instSel = document.getElementById('instructorId');
+      instSel.innerHTML = `<option value="${s.instructorId}">${s.instructorName} — ${s.instructorEmail}</option>`;
+      instSel.value = s.instructorId;
+
+      // Restore class type (default ONLINE if missing, for legacy sessions)
+      setClassType(s.classType || 'ONLINE');
+
+      if ((s.classType || 'ONLINE') === 'ONLINE') {
+        document.getElementById('meetingPlatform').value = s.meetingPlatform || 'ZOOM';
+        document.getElementById('meetingLink').value     = s.meetingLink || '';
+      } else {
+        document.getElementById('classLocation').value = s.classLocation || '';
+      }
+    } catch(err) {
+      showToast('Failed to load session: ' + err.message, 'error');
+    }
+  }
+
+  // ============================================================
+  // HELPER — clear a single field's error state
+  // ============================================================
+  function clearFieldError(el) {
+    if (!el) return;
+    el.classList.remove('is-invalid');
+    const errEl = document.getElementById(el.id + '-error');
+    if (errEl) errEl.textContent = '';
+  }
+
+  // ============================================================
+  // FORM SUBMIT
+  // ============================================================
+  document.getElementById('session-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    clearAllErrors(this);
+    hide(document.getElementById('error-banner'));
+
+    const classType = getClassType();
+    let valid = true;
+
+    // Common required fields
+    const commonFields = [
+      ['courseId',     'Course is required'],
+      ['instructorId', 'Instructor is required'],
+      ['title',        'Session title is required'],
+      ['sessionDate',  'Date is required'],
+      ['startTime',    'Start time is required'],
+      ['endTime',      'End time is required'],
+    ];
+    commonFields.forEach(([id, msg]) => {
+      if (!document.getElementById(id).value) {
+        showFieldError(document.getElementById(id), msg); valid = false;
+      }
+    });
+
+    // Time order check
+    const start = document.getElementById('startTime').value;
+    const end   = document.getElementById('endTime').value;
+    if (start && end && end <= start) {
+      showFieldError(document.getElementById('endTime'), 'End time must be after start time');
+      valid = false;
+    }
+
+    // Mode-specific validation
+    if (classType === 'ONLINE') {
+      const link = document.getElementById('meetingLink').value;
+      if (!link) {
+        showFieldError(document.getElementById('meetingLink'), 'Meeting link is required');
+        valid = false;
+      } else if (!link.startsWith('https://')) {
+        showFieldError(document.getElementById('meetingLink'), 'Meeting link must start with https://');
+        valid = false;
+      }
+    } else {
+      const loc = document.getElementById('classLocation').value.trim();
+      if (!loc) {
+        showFieldError(document.getElementById('classLocation'), 'Class location is required');
+        valid = false;
+      }
+    }
+
+    if (!valid) return;
+
+    // Conflict gate
+    if (conflictDetected && !document.getElementById('override-conflict').checked) {
+      showToast('Please acknowledge the scheduling conflict or change the time.', 'error');
+      return;
+    }
+
+    if (isEdit && editSession?.recurrenceGroupId) {
+      document.getElementById('scope-modal').classList.add('open');
+      return;
+    }
+
+    await doSubmit('THIS_ONLY');
+  });
+
+  let scopeModalResolver = null;
+  function closeScopeModal() { document.getElementById('scope-modal').classList.remove('open'); }
+  async function submitWithScope(scope) {
+    closeScopeModal();
+    await doSubmit(scope);
+  }
+
+  async function doSubmit(editScope) {
+    const btn = document.getElementById('save-btn');
+    setLoading(btn, true, 'Saving…');
+
+    const classType = getClassType();
+
+    const body = {
+      courseId:        parseInt(document.getElementById('courseId').value),
+      instructorId:    parseInt(document.getElementById('instructorId').value),
+      title:           document.getElementById('title').value.trim(),
+      sessionDate:     document.getElementById('sessionDate').value,
+      startTime:       document.getElementById('startTime').value,
+      endTime:         document.getElementById('endTime').value,
+      classType,
+      notes:           document.getElementById('notes').value.trim() || null,
+      overrideConflict: document.getElementById('override-conflict').checked,
+    };
+
+    if (classType === 'ONLINE') {
+      body.meetingPlatform = document.getElementById('meetingPlatform').value;
+      body.meetingLink     = document.getElementById('meetingLink').value;
+    } else {
+      body.classLocation = document.getElementById('classLocation').value.trim();
+    }
+
+    if (!isEdit) {
+      const recurring = document.getElementById('recurring').checked;
+      body.recurring = recurring;
+      if (recurring) {
+        const freq        = document.getElementById('recurrenceFrequency').value;
+        const repeatUntil = document.getElementById('repeatUntil').value;
+
+        if (!repeatUntil) {
+          showFieldError(document.getElementById('repeatUntil'), 'Repeat until date is required');
+          setLoading(btn, false);
+          return;
+        }
+
+        body.recurrenceFrequency = freq;
+        body.repeatUntil         = repeatUntil;
+
+        const days = Array.from(document.querySelectorAll('.day-cb:checked')).map(cb => cb.value);
+        if (freq === 'WEEKLY' || freq === 'BIWEEKLY') {
+          if (days.length === 0) {
+            const errEl = document.getElementById('daysOfWeek-error');
+            if (errEl) errEl.textContent = 'Please select at least one day of the week';
+            document.getElementById('days-of-week-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setLoading(btn, false);
+            return;
+          }
+          body.daysOfWeek = days.join(',');
+        }
+      }
+    } else {
+      body.editScope = editScope;
+    }
+
+    try {
+      if (isEdit) {
+        await apiCall(`/schedule/${editId}`, { method: 'PATCH', body });
+        showToast('Session updated!', 'success');
+      } else {
+        const resp = await apiCall('/schedule', { method: 'POST', body });
+        const count = resp.data.length;
+        showToast(count === 1 ? 'Session created!' : `${count} sessions created!`, 'success');
+      }
+      setTimeout(() => { window.location.href = 'schedule.html'; }, 900);
+    } catch(err) {
+      setLoading(btn, false);
+      if (err.status === 409) {
+        document.getElementById('conflict-msg').textContent = err.message;
+        document.getElementById('conflict-banner').classList.add('show');
+        conflictDetected = true;
+      }
+      document.getElementById('error-text').textContent = err.message || 'Save failed.';
+      show(document.getElementById('error-banner'));
+    }
+  }
+
+  // ============================================================
+  // DELETE
+  // ============================================================
+  async function confirmDelete() {
+    if (!editSession) return;
+    if (editSession.recurrenceGroupId) {
+      document.getElementById('delete-scope-modal').classList.add('open');
+    } else {
+      if (!confirm('Are you sure you want to delete this session? This action cannot be undone.')) return;
+      await performDelete('THIS_ONLY');
+    }
+  }
+
+  function closeDeleteScopeModal() {
+    document.getElementById('delete-scope-modal').classList.remove('open');
+  }
+
+  async function confirmDeleteWithScope(scope) {
+    closeDeleteScopeModal();
+    if (!confirm('Are you sure? This action cannot be undone.')) return;
+    await performDelete(scope);
+  }
+
+  async function performDelete(scope) {
+    try {
+      await apiCall(`/schedule/${editId}?editScope=${scope}`, { method: 'DELETE' });
+      showToast('Session(s) deleted.', 'info');
+      setTimeout(() => { window.location.href = 'schedule.html'; }, 700);
+    } catch(err) { showToast(err.message, 'error'); }
+  }
+</script>
+</body>
+</html>
