@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Hi-Tech Institute LMS</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+
+<div class="auth-page">
+
+    <!-- Card wrapper -->
+    <div class="auth-card-wrap">
+
+        <!-- Floating card -->
+        <div class="auth-container">
+
+            <!-- Left: Form Panel -->
+            <div class="auth-form-panel">
+
+                <!-- Logo at top of form panel -->
+                <img src="assets/logo.png" alt="Hi-Tech Institute" class="auth-card-logo">
+
+                <!-- Error Banner -->
+                <div class="alert alert-danger hidden" id="error-banner" style="max-width:420px;margin-bottom:20px;">
+                    <span class="alert-icon">⚠️</span>
+                    <span id="error-text">Invalid email or password.</span>
+                </div>
+
+                <h2 class="auth-title">Welcome back</h2>
+                <p class="auth-subtitle">Enter your details to access your learning portal.</p>
+
+                <form id="login-form" novalidate style="width:100%;">
+
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email address</label>
+                        <div class="auth-input-wrap">
+                            <span class="auth-input-icon">✉️</span>
+                            <input type="email" id="email" name="email"
+                                   class="form-control" placeholder="name@hitech.edu" autocomplete="email">
+                        </div>
+                        <div class="form-error" id="email-error"></div>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password</label>
+                        <div class="auth-input-wrap">
+                            <span class="auth-input-icon">🔒</span>
+                            <input type="password" id="password" name="password"
+                                   class="form-control" placeholder="••••••••" autocomplete="current-password">
+                            <button type="button" class="input-toggle" id="toggle-password" title="Show/hide password">👁</button>
+                        </div>
+                        <div class="form-error" id="password-error"></div>
+                    </div>
+
+                    <!-- Remember me + Forgot -->
+                    <div class="auth-remember-row">
+                        <label>
+                            <input type="checkbox" id="remember-me">
+                            Remember me
+                        </label>
+                        <a href="forgot-password.html">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="login-btn">
+                        Sign in
+                    </button>
+
+                </form>
+
+                <!-- Social login -->
+                <div class="auth-divider">Or continue with</div>
+
+                <div class="auth-social-row">
+                    <a href="#" class="auth-social-btn">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/250px-Google_%22G%22_logo.svg.png?_=20190503112357"
+                             alt="Google"
+                             class="auth-social-icon">
+                        Google
+                    </a>
+
+                    <a href="#" class="auth-social-btn">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/1280px-Facebook_Logo_%282019%29.png?_=20190503112358"
+                             alt="Facebook"
+                             class="auth-social-icon">
+                        Facebook
+                    </a>
+                </div>
+
+                <div class="auth-bottom-link" style="margin-top:28px;">
+                    Don't have an account? <a href="register.html">Sign Up</a>
+                </div>
+
+            </div><!-- /auth-form-panel -->
+
+            <!-- Right: Photo Panel -->
+            <div class="auth-photo-panel">
+                <img src="assets/image2.png" alt="Hi-Tech Institute Campus">
+            </div><!-- /auth-photo-panel -->
+
+        </div><!-- /auth-container -->
+
+    </div><!-- /auth-card-wrap -->
+
+    <!-- Page Footer -->
+    <div class="auth-page-footer">
+        <span>© 2024 HI TECH INSTITUTE</span>
+        <div class="auth-page-footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Help Center</a>
+        </div>
+    </div>
+
+</div><!-- /auth-page -->
+
+<script src="js/common.js"></script>
+<script>
+    redirectIfLoggedIn();
+
+    const form      = document.getElementById('login-form');
+    const loginBtn  = document.getElementById('login-btn');
+    const errBanner = document.getElementById('error-banner');
+    const errText   = document.getElementById('error-text');
+
+    document.getElementById('toggle-password').addEventListener('click', function () {
+        const pwd = document.getElementById('password');
+        pwd.type = pwd.type === 'password' ? 'text' : 'password';
+        this.textContent = pwd.type === 'password' ? '👁' : '🙈';
+    });
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        clearAllErrors(form);
+        hide(errBanner);
+
+        const email    = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        let valid = true;
+        if (!email)    { showFieldError(document.getElementById('email'),    'Email is required');    valid = false; }
+        if (!password) { showFieldError(document.getElementById('password'), 'Password is required'); valid = false; }
+        if (!valid) return;
+
+        setLoading(loginBtn, true, 'Logging in...');
+
+        try {
+            const response = await apiCall('/auth/login', { method: 'POST', body: { email, password } });
+            saveAuth(response.data);
+            showToast('Login successful! Redirecting...', 'success');
+            setTimeout(() => redirectByRole(response.data.role), 800);
+        } catch (err) {
+            setLoading(loginBtn, false);
+            errText.textContent = err.message || 'Invalid email or password.';
+            show(errBanner);
+            document.getElementById('email').classList.add('error');
+            document.getElementById('password').classList.add('error');
+        }
+    });
+
+    document.getElementById('email').addEventListener('input',    function() { clearFieldError(this); hide(errBanner); });
+    document.getElementById('password').addEventListener('input', function() { clearFieldError(this); hide(errBanner); });
+</script>
+</body>
+</html>
