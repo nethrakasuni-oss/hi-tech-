@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Analytics — Hi-Tech LMS</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <style>
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px; }
+    /* Distribution chart */
+    .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px; }
+    /* Histogram */
+    .histogram { display: flex; align-items: flex-end; gap: 8px; height: 180px; margin-top:20px; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; position:relative; }
+    .bar-fill { width: 100%; background: var(--brand-primary); border-radius: 6px 6px 0 0; min-height: 4px; position: relative; cursor: pointer; transition:background 0.2s; }
+    .bar-fill:hover { background: var(--brand-dark); }
+    .bar-fill:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100%+8px); left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; font-size: 12px; font-weight:600; padding: 6px 10px; border-radius: 6px; white-space: nowrap; z-index: 10; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
+    .bar-label { font-size: 11px; font-weight:600; color: var(--text-muted); text-align: center; }
+    /* Pie chart */
+    .pie-wrap { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top:12px; }
+    .pie-svg { width: 140px; height: 140px; }
+    .pie-legend { display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight:600; color:var(--text-body); }
+    .pie-legend-item { display: flex; align-items: center; gap: 8px; }
+    .pie-dot { width: 14px; height: 14px; border-radius: 4px; }
+    /* Difficulty chart */
+    .diff-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+    .diff-label { font-size: 13px; font-weight:500; color: var(--text-body); width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .diff-track { flex: 1; background: var(--page-bg); border-radius: 6px; height: 24px; overflow: hidden; border:1px solid var(--border-light); }
+    .diff-fill { height: 100%; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 12px; font-weight: 800; color: #fff; min-width: 40px; }
+    
+    @media(max-width:900px){ .kpi-row,.charts-row{grid-template-columns:1fr 1fr;} }
+    @media(max-width:560px){ .kpi-row{grid-template-columns:1fr;} .charts-row{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="main-navbar"></nav>
+  <div id="toast-container"></div>
+
+  <main class="container page-content">
+    <div class="breadcrumb" style="margin-bottom:24px;">
+      <a href="dashboard.html">Dashboard</a> <span class="breadcrumb-sep">/</span>
+      <a href="exams.html">Exams</a> <span class="breadcrumb-sep">/</span>
+      <span id="crumb-exam">Analytics</span>
+    </div>
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 id="page-title">Class Analytics</h1>
+        <p id="page-subtitle"></p>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn btn-secondary outline" onclick="exportCSV()">📥 Export CSV</button>
+        <button class="btn btn-primary" id="release-btn" onclick="releaseResults()" style="display:none;">
+          🚀 Release Results to Students
+        </button>
+        <span id="released-badge" style="display:none;font-size:14px;font-weight:700;color:var(--success);background:#f0fdf4;border:1px solid #bbf7d0;padding:10px 16px;border-radius:10px;align-items:center;gap:6px;">
+          ✓ Results Released
+        </span>
+      </div>
+    </div>
+
+    <div id="loading" class="empty-state">
+      <p class="empty-state-title" style="font-size:18px;">Loading analytics…</p>
+    </div>
+
+    <div id="analytics-content" class="hidden">
+      <!-- KPI cards -->
+      <div class="kpi-row">
+        <div class="stat-card"><div class="stat-label">Class Average</div><div class="stat-value" id="kpi-avg" style="color:var(--brand-primary);">—</div></div>
+        <div class="stat-card"><div class="stat-label">Highest Score</div><div class="stat-value" id="kpi-high">—</div></div>
+        <div class="stat-card"><div class="stat-label">Lowest Score</div><div class="stat-value" id="kpi-low">—</div></div>
+        <div class="stat-card"><div class="stat-label">Pass Rate</div><div class="stat-value" id="kpi-pass" style="color:var(--success);">—</div></div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="charts-row">
+        <div class="content-card">
+          <div class="content-card-hdr">
+            <span class="content-card-title">📊 Score Distribution</span>
+          </div>
+          <div id="submissions-note" style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:8px;"></div>
+          <div class="histogram" id="histogram"></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--text-muted);margin-top:12px;padding:0 8px;">
+            <span>0%</span><span>50%</span><span>100%</span>
+          </div>
+        </div>
+        
+        <div class="content-card">
+          <div class="content-card-hdr">
+            <span class="content-card-title">🥧 Pass / Fail</span>
+          </div>
+          <div class="pie-wrap" id="pie-wrap"></div>
+        </div>
+      </div>
+
+      <!-- Question difficulty -->
+      <div class="content-card" style="margin-bottom:24px;">
+        <div class="content-card-hdr">
+          <span class="content-card-title">🎯 Question Difficulty</span>
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);">% Correctly Answered</span>
+        </div>
+        <div id="difficulty-chart" style="margin-top:20px;">
+          <p class="text-muted">Only available for MCQ and auto-graded Short Answer questions.</p>
+        </div>
+      </div>
+
+      <!-- At-risk students -->
+      <div class="content-card" style="padding:0;">
+        <div class="content-card-hdr" style="padding:20px 24px;">
+          <span class="content-card-title">⚠️ At-Risk Students <span style="font-size:14px;color:var(--text-muted);font-weight:500;">(below passing grade)</span></span>
+        </div>
+        <div id="at-risk-table">
+          <p class="text-muted" style="padding:48px;text-align:center;">Loading…</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer" style="margin-top:60px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+  </footer>
+
+  <script src="js/common.js"></script>
+  <script>
+    requireAuth();
+    if (!['ADMIN','INSTRUCTOR'].includes(getUserRole())) window.location.href = 'dashboard.html';
+    buildNavbar('exams');
+
+    const params = new URLSearchParams(location.search);
+    const examId = params.get('examId');
+    if (!examId) window.location.href = 'exams.html';
+
+    let analytics = null;
+    loadAnalytics();
+
+    async function loadAnalytics() {
+      try {
+        const r = await apiCall(`/exams/${examId}/analytics`);
+        analytics = r.data;
+        renderAnalytics(analytics);
+      } catch(err) {
+        document.getElementById('loading').innerHTML = `<p style="color:var(--danger);text-align:center;">Error: ${err.message}</p>`;
+      }
+    }
+
+    function renderAnalytics(d) {
+      hide(document.getElementById('loading'));
+      show(document.getElementById('analytics-content'));
+
+      document.getElementById('crumb-exam').textContent = d.examTitle;
+      document.getElementById('page-title').textContent = d.examTitle;
+      document.getElementById('page-subtitle').textContent = `Course: ${d.courseTitle} · ${d.totalSubmissions} graded submission${d.totalSubmissions !== 1 ? 's' : ''}`;
+
+      // Release status
+      if (d.resultsReleased) {
+        document.getElementById('released-badge').style.display = 'inline-flex';
+      } else if (d.totalSubmissions > 0) {
+        document.getElementById('release-btn').style.display = 'inline-flex';
+      }
+
+      if (d.totalSubmissions === 0) {
+        document.getElementById('analytics-content').innerHTML =
+          `<div class="empty-state">
+            <div class="empty-state-icon">📊</div>
+            <p class="empty-state-title" style="font-size:20px;">No Submissions Yet</p>
+            <p class="empty-state-sub">Check back once students have completed the exam.</p>
+          </div>`;
+        return;
+      }
+
+      // KPIs
+      document.getElementById('kpi-avg').textContent  = d.averageScore  != null ? d.averageScore + '%' : '—';
+      document.getElementById('kpi-high').textContent = d.highestScore  != null ? d.highestScore + '%' : '—';
+      document.getElementById('kpi-low').textContent  = d.lowestScore   != null ? d.lowestScore  + '%' : '—';
+      document.getElementById('kpi-pass').textContent = d.passRate       != null ? d.passRate     + '%' : '—';
+
+      // Histogram
+      document.getElementById('submissions-note').textContent = `${d.totalSubmissions} graded submission${d.totalSubmissions!==1?'s':''}`;
+      const buckets = d.scoreDistribution || [];
+      const maxCount = Math.max(...buckets.map(b => b.count), 1);
+      document.getElementById('histogram').innerHTML = buckets.map(b => {
+        const pct = Math.max(4, (b.count / maxCount) * 100);
+        return `<div class="bar-col">
+          <div class="bar-fill" style="height:${pct}%;" data-tip="${b.label}%: ${b.count} student${b.count!==1?'s':''}"></div>
+          <div class="bar-label">${b.label}</div>
+        </div>`;
+      }).join('');
+
+      // Pie chart
+      const passCount = Math.round(d.totalSubmissions * (parseFloat(d.passRate) / 100));
+      const failCount = d.totalSubmissions - passCount;
+      const passPct = d.totalSubmissions > 0 ? (passCount / d.totalSubmissions) * 360 : 0;
+      const passD = describeArc(70, 70, 60, 0, passPct);
+      const failD = describeArc(70, 70, 60, passPct, 360);
+      document.getElementById('pie-wrap').innerHTML = `
+        <svg class="pie-svg" viewBox="0 0 140 140">
+          ${passPct > 0 && passPct < 360 ? `<path d="${passD}" fill="var(--success)"/>` : ''}
+          ${passPct === 0 ? `<circle cx="70" cy="70" r="60" fill="var(--danger)"/>` : ''}
+          ${passPct === 360 ? `<circle cx="70" cy="70" r="60" fill="var(--success)"/>` : ''}
+          ${failCount > 0 && passPct < 360 ? `<path d="${failD}" fill="var(--danger)"/>` : ''}
+        </svg>
+        <div class="pie-legend">
+          <div class="pie-legend-item"><div class="pie-dot" style="background:var(--success);"></div> Pass (${passCount})</div>
+          <div class="pie-legend-item"><div class="pie-dot" style="background:var(--danger);"></div> Fail (${failCount})</div>
+        </div>`;
+
+      // Difficulty
+      const diffEl = document.getElementById('difficulty-chart');
+      if ((d.questionDifficulty || []).length) {
+        diffEl.innerHTML = d.questionDifficulty.map(q => {
+          const pct = parseFloat(q.correctPct || 0);
+          const color = pct >= 70 ? 'var(--success)' : pct >= 40 ? 'var(--warning)' : 'var(--danger)';
+          return `<div class="diff-row">
+            <div class="diff-label" title="${q.questionText}">Q${q.displayOrder}: ${q.questionText}</div>
+            <div class="diff-track">
+              <div class="diff-fill" style="width:${Math.max(pct,6)}%;background:${color};">${pct}%</div>
+            </div>
+          </div>`;
+        }).join('');
+      } else {
+        diffEl.innerHTML = '<div class="empty-state" style="border:none;padding:24px;"><p class="empty-state-title" style="font-size:16px;">No auto-graded data.</p></div>';
+      }
+
+      // At-risk
+      const atRisk = d.atRiskStudents || [];
+      const atRiskEl = document.getElementById('at-risk-table');
+      if (!atRisk.length) {
+        atRiskEl.innerHTML = '<div style="padding:48px;text-align:center;font-size:18px;font-weight:700;color:var(--success);">🎉 All students passed!</div>';
+      } else {
+        atRiskEl.innerHTML = `<div class="table-wrapper"><table class="content-table" style="margin:0;">
+          <thead><tr><th style="padding-left:24px;">Student</th><th>Score</th><th>Percentage</th><th>Status</th><th style="padding-right:24px;">Action</th></tr></thead>
+          <tbody>${atRisk.map(s => `<tr>
+            <td style="padding-left:24px;"><div style="font-weight:700;color:var(--text-primary);">${s.studentName}</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${s.studentEmail}</div></td>
+            <td style="font-weight:600;color:var(--text-body);">${Number(s.score||0).toFixed(1)}</td>
+            <td><span style="font-weight:800;color:var(--danger);">${Number(s.percentage||0).toFixed(1)}%</span></td>
+            <td><span style="display:inline-block;background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:800;padding:4px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:0.05em;">At Risk</span></td>
+            <td style="padding-right:24px;"><a href="exam-results.html?attemptId=${s.attemptId}" target="_blank" class="btn btn-sm btn-secondary outline">View Results</a></td>
+          </tr>`).join('')}</tbody>
+        </table></div>`;
+      }
+    }
+
+    async function releaseResults() {
+      if (!confirm('Release results to all students? They will receive an email notification.')) return;
+      try {
+        await apiCall(`/exams/${examId}/release-results`, { method: 'POST' });
+        showToast('Results released! Students have been notified.', 'success');
+        document.getElementById('release-btn').style.display = 'none';
+        document.getElementById('released-badge').style.display = 'inline-flex';
+      } catch(err) { showToast(err.message, 'error'); }
+    }
+
+    function exportCSV() {
+      if (!analytics) return;
+      const rows = [['Student','Email','Score','Percentage','Passed','Attempt ID']];
+      (analytics.atRiskStudents || []).forEach(s => {
+        rows.push([s.studentName, s.studentEmail, s.score, s.percentage, 'No', s.attemptId]);
+      });
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+      a.download = `exam-${examId}-results.csv`;
+      a.click();
+    }
+
+    // SVG pie path helper
+    function describeArc(cx, cy, r, startAngle, endAngle) {
+      const s = polarToCart(cx, cy, r, startAngle - 90);
+      const e = polarToCart(cx, cy, r, endAngle - 90);
+      const large = endAngle - startAngle > 180 ? 1 : 0;
+      return `M ${cx} ${cy} L ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y} Z`;
+    }
+    function polarToCart(cx, cy, r, angle) {
+      const rad = angle * Math.PI / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+  </script>
+</body>
+</html>

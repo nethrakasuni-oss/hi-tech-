@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Submitted — Hi-Tech LMS</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+  <nav class="navbar" id="main-navbar"></nav>
+  
+  <main class="container page-content" style="max-width:600px; padding-top:60px; padding-bottom:60px;">
+    <div class="content-card" style="text-align:center; padding:60px 40px; box-shadow:0 10px 40px rgba(0,0,0,0.05); border:1px solid var(--border-light);">
+      <div style="font-size:72px;margin-bottom:24px;">✅</div>
+      <h1 style="font-size:32px;font-weight:800;color:var(--text-primary);margin-bottom:16px;">Exam Submitted!</h1>
+      <p style="color:var(--text-body);font-size:16px;line-height:1.6;margin:0 auto 32px;">
+        Your exam has been submitted successfully. Your instructor will review your answers and release results shortly.
+      </p>
+      
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:20px;margin:0 auto 40px;">
+        <p style="font-size:14px;font-weight:600;color:#0369a1;margin:0;">
+          📧 You'll receive an email notification when your results are available.
+        </p>
+      </div>
+      
+      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+        <a href="exams.html" class="btn btn-primary" style="padding:12px 24px;">📝 Back to Exams</a>
+        <a href="dashboard.html" class="btn btn-secondary outline" style="padding:12px 24px;">Dashboard</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer" style="margin-top:auto;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+  </footer>
+
+  <script src="js/common.js"></script>
+  <script>requireAuth(); buildNavbar('exams');</script>
+</body>
+</html>

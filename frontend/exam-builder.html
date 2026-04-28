@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Builder — Hi-Tech LMS</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <style>
+    .builder-layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; }
+    /* Settings panel */
+    .settings-panel { padding: 24px; height: fit-content; position: sticky; top: 96px; }
+    .settings-title  { font-size: 15px; font-weight: 800; color: var(--text-primary); margin-bottom: 20px; }
+    /* Question editor */
+    .questions-panel { display: flex; flex-direction: column; gap: 20px; }
+    .question-card {
+      background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 16px; padding: 24px;
+      position: relative; box-shadow: 0 2px 10px rgba(0,0,0,.02);
+    }
+    .question-card.mcq    { border-left: 4px solid #3b82f6; }
+    .question-card.short  { border-left: 4px solid #10b981; }
+    .question-card.essay  { border-left: 4px solid #8b5cf6; }
+    .question-card.file   { border-left: 4px solid #f59e0b; }
+    .q-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap:wrap; gap:12px; }
+    .q-type-badge { font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 999px; letter-spacing:0.05em; text-transform:uppercase; }
+    .q-type-badge.mcq   { background: #eff6ff; color: #1d4ed8; }
+    .q-type-badge.short { background: #ecfdf5; color: #065f46; }
+    .q-type-badge.essay { background: #f5f3ff; color: #5b21b6; }
+    .q-type-badge.file  { background: #fffbeb; color: #92400e; }
+    .option-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .option-row input[type=text] { flex: 1; }
+    .option-correct { width: 22px; height: 22px; cursor: pointer; accent-color: var(--success); }
+    /* Total marks indicator */
+    .marks-indicator { background: var(--page-bg); border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 20px; border:1px solid var(--border-light); }
+    .marks-val { font-size: 24px; font-weight: 800; }
+    .marks-val.ok { color: var(--success); }
+    .marks-val.mismatch { color: var(--danger); }
+    .add-question-bar { display: flex; gap: 12px; flex-wrap: wrap; padding: 20px; background: var(--card-bg); border-radius: 12px; border: 1px dotted var(--border-subtle); align-items:center; }
+    @media(max-width:900px){ .builder-layout { grid-template-columns: 1fr; } .settings-panel { position: static; } }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="main-navbar"></nav>
+  <div id="toast-container"></div>
+
+  <main class="container page-content">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb" style="margin-bottom:24px;">
+      <a href="dashboard.html">Dashboard</a> <span class="breadcrumb-sep">/</span>
+      <a href="exams.html">Exams</a> <span class="breadcrumb-sep">/</span>
+      <span id="crumb-label">Create Exam</span>
+    </div>
+
+    <!-- Error / validation banner -->
+    <div class="alert alert-danger hidden" id="error-banner" style="margin-bottom:24px;">
+      <span class="alert-icon">⚠️</span><span id="error-text"></span>
+    </div>
+
+    <div class="builder-layout">
+      <!-- LEFT: Settings panel -->
+      <div class="content-card settings-panel">
+        <div class="settings-title">⚙️ Exam Settings</div>
+
+        <div class="form-group">
+          <label class="form-label" for="courseId">Course *</label>
+          <select id="courseId" class="form-control">
+            <option value="">Loading courses…</option>
+          </select>
+          <div class="form-error" id="courseId-error"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="title">Exam Title *</label>
+          <input type="text" id="title" class="form-control" placeholder="e.g. Mid-Term Exam">
+          <div class="form-error" id="title-error"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">Description</label>
+          <textarea id="description" class="form-control" rows="2" placeholder="Optional instructions…" style="resize:vertical;"></textarea>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group">
+            <label class="form-label" for="totalMarks">Total Marks *</label>
+            <input type="number" id="totalMarks" class="form-control" min="0.01" step="0.5">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="passingGradePct">Pass % *</label>
+            <input type="number" id="passingGradePct" class="form-control" min="1" max="100" value="50">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group">
+            <label class="form-label" for="timeLimitMinutes">Time (min)</label>
+            <input type="number" id="timeLimitMinutes" class="form-control" min="1" placeholder="Untimed">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="maxAttempts">Max Attempts</label>
+            <input type="number" id="maxAttempts" class="form-control" min="1" placeholder="∞">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="availableFrom">Opens At *</label>
+          <input type="datetime-local" id="availableFrom" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="availableUntil">Closes At *</label>
+          <input type="datetime-local" id="availableUntil" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="resultRelease">Result Release</label>
+          <select id="resultRelease" class="form-control">
+            <option value="MANUAL">Manual (Instructor releases)</option>
+            <option value="IMMEDIATE">Immediate (Auto-released on submit)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="padding:12px;background:var(--page-bg);border-radius:10px;border:1px solid var(--border-light);">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;color:var(--text-body);font-weight:500;">
+            <input type="checkbox" id="useRandomization" style="width:18px;height:18px;accent-color:var(--brand-primary);"> Use pool randomization
+          </label>
+        </div>
+
+        <!-- Marks summary -->
+        <div class="marks-indicator">
+          <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Questions Sum</div>
+          <div class="marks-val" id="marks-indicator">0</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">vs Total Marks set above</div>
+        </div>
+
+        <!-- Save / Publish buttons -->
+        <button class="btn btn-primary" style="width:100%;margin-bottom:12px;" onclick="saveExam(false)" id="save-btn">
+          💾 Save as Draft
+        </button>
+        <button class="btn btn-secondary" style="width:100%;" onclick="saveExam(true)" id="publish-btn">
+          🚀 Save &amp; Publish
+        </button>
+        <a href="exams.html" class="btn btn-outline" style="width:100%;margin-top:12px;text-align:center;">Cancel</a>
+      </div>
+
+      <!-- RIGHT: Question editor -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <h2 style="font-size:22px;font-weight:800;color:var(--text-primary);">Exam Questions</h2>
+          <span id="q-count-label" style="font-size:14px;font-weight:600;color:var(--text-muted);background:var(--brand-light);color:var(--brand-primary);padding:4px 12px;border-radius:999px;">0 questions</span>
+        </div>
+
+        <div class="questions-panel" id="questions-panel">
+          <div class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <p class="empty-state-title" style="font-size:18px;">No questions yet</p>
+            <p class="empty-state-sub">Add your first question using the controls below.</p>
+          </div>
+        </div>
+
+        <!-- Add question bar -->
+        <div class="add-question-bar" style="margin-top:24px;">
+          <span style="font-size:14px;font-weight:700;color:var(--text-body);margin-right:8px;">+ Add Question:</span>
+          <button class="btn btn-sm btn-secondary outline" onclick="addQuestion('MCQ')">MCQ</button>
+          <button class="btn btn-sm btn-secondary outline" onclick="addQuestion('SHORT_ANSWER')">Short Answer</button>
+          <button class="btn btn-sm btn-secondary outline" onclick="addQuestion('ESSAY')">Essay</button>
+          <button class="btn btn-sm btn-secondary outline" onclick="addQuestion('FILE_UPLOAD')">File Upload</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer" style="margin-top:60px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+  </footer>
+
+  <script src="js/common.js"></script>
+  <script>
+    requireAuth();
+    if (!['ADMIN','INSTRUCTOR'].includes(getUserRole())) window.location.href = 'dashboard.html';
+    buildNavbar('exams');
+
+    const params = new URLSearchParams(location.search);
+    const editId = params.get('id');
+    const isEdit = !!editId;
+    let questions = [];  // [{type, text, points, poolName, options:[{text,correct}], rubric, ...}]
+    let nextQId = 0;
+
+    if (isEdit) {
+      document.getElementById('crumb-label').textContent = 'Edit Exam';
+      loadExamForEdit();
+    }
+
+    // Load courses
+    (async () => {
+      try {
+        const r = await apiCall('/courses/manage?page=0&size=100&status=ACTIVE');
+        const sel = document.getElementById('courseId');
+        sel.innerHTML = '<option value="">Select course…</option>';
+        (r.data.content || []).forEach(c => {
+          sel.innerHTML += `<option value="${c.id}">${c.title} (${c.courseCode})</option>`;
+        });
+      } catch(e) {}
+    })();
+
+    // ============================================================
+    // ADD QUESTION
+    // ============================================================
+    function addQuestion(type) {
+      const q = { _id: nextQId++, type, text: '', points: 1, poolName: '', options: [{text:'',correct:false},{text:'',correct:false}], rubric: '', allowedFileTypes: '', maxFileSizeMb: 10, shortAnswerMethod: 'MANUAL', expectedAnswer: '' };
+      questions.push(q);
+      renderQuestions();
+      updateMarksIndicator();
+      // Scroll to new question
+      const cards = document.getElementById('questions-panel').querySelectorAll('.question-card');
+      cards[cards.length-1]?.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+
+    function removeQuestion(qid) {
+      questions = questions.filter(q => q._id !== qid);
+      renderQuestions();
+      updateMarksIndicator();
+    }
+
+    function addOption(qid) {
+      const q = questions.find(q => q._id === qid);
+      if (q) { q.options.push({text:'', correct:false}); renderQuestions(); }
+    }
+
+    function removeOption(qid, optIdx) {
+      const q = questions.find(q => q._id === qid);
+      if (q && q.options.length > 2) { q.options.splice(optIdx, 1); renderQuestions(); }
+    }
+
+    function updateMarksIndicator() {
+      const sum = questions.reduce((s, q) => s + (parseFloat(q.points) || 0), 0);
+      const total = parseFloat(document.getElementById('totalMarks').value) || 0;
+      const el = document.getElementById('marks-indicator');
+      el.textContent = sum.toFixed(2);
+      el.className = 'marks-val ' + (Math.abs(sum - total) < 0.01 ? 'ok' : 'mismatch');
+    }
+
+    document.getElementById('totalMarks').addEventListener('input', updateMarksIndicator);
+
+    // ============================================================
+    // RENDER QUESTIONS
+    // ============================================================
+    function renderQuestions() {
+      const panel = document.getElementById('questions-panel');
+      document.getElementById('q-count-label').textContent = questions.length + ' question' + (questions.length===1?'':'s');
+
+      if (!questions.length) {
+        panel.innerHTML = `<div class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <p class="empty-state-title" style="font-size:18px;">No questions yet</p>
+            <p class="empty-state-sub">Add your first question below.</p>
+          </div>`;
+        return;
+      }
+
+      panel.innerHTML = questions.map((q, idx) => {
+        const typeClass = {MCQ:'mcq',SHORT_ANSWER:'short',ESSAY:'essay',FILE_UPLOAD:'file'}[q.type]||'mcq';
+        const typeLabel = {MCQ:'MCQ',SHORT_ANSWER:'Short Answer',ESSAY:'Essay',FILE_UPLOAD:'File Upload'}[q.type];
+
+        let typeSpecific = '';
+        if (q.type === 'MCQ') {
+          typeSpecific = `<div style="margin-top:16px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text-body);margin-bottom:12px;">
+              Answer Options (✓ = correct)
+            </div>
+            ${q.options.map((opt, oi) => `
+              <div class="option-row">
+                <input type="checkbox" class="option-correct" ${opt.correct?'checked':''}
+                  onchange="questions[${idx}].options[${oi}].correct=this.checked"
+                  title="Mark as correct">
+                <input type="text" class="form-control" value="${opt.text||''}"
+                  placeholder="Option ${oi+1}…"
+                  oninput="questions[${idx}].options[${oi}].text=this.value" style="height:42px;">
+                ${q.options.length > 2 ? `<button class="btn btn-sm btn-danger outline" style="padding:4px 10px;font-size:16px;" onclick="removeOption(${q._id},${oi})">✕</button>` : ''}
+              </div>`).join('')}
+            <button class="btn btn-sm btn-secondary outline" style="margin-top:8px;" onclick="addOption(${q._id})">+ Add Option</button>
+          </div>`;
+        } else if (q.type === 'SHORT_ANSWER') {
+          typeSpecific = `<div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Grading Method</label>
+              <select class="form-control" onchange="questions[${idx}].shortAnswerMethod=this.value">
+                <option value="MANUAL" ${q.shortAnswerMethod==='MANUAL'?'selected':''}>Manual Review</option>
+                <option value="EXACT_MATCH" ${q.shortAnswerMethod==='EXACT_MATCH'?'selected':''}>Exact Match</option>
+                <option value="KEYWORD_MATCH" ${q.shortAnswerMethod==='KEYWORD_MATCH'?'selected':''}>Keyword Match</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Expected Answer / Keywords</label>
+              <input type="text" class="form-control" value="${q.expectedAnswer||''}"
+                placeholder="Answer or comma-separated keywords"
+                oninput="questions[${idx}].expectedAnswer=this.value">
+            </div>
+          </div>`;
+        } else if (q.type === 'ESSAY') {
+          typeSpecific = `<div class="form-group" style="margin-top:16px;margin-bottom:0;">
+            <label class="form-label">Grading Rubric (shown to grader, not student)</label>
+            <textarea class="form-control" rows="2" placeholder="Describe grading criteria…" style="resize:vertical;"
+              oninput="questions[${idx}].rubric=this.value">${q.rubric||''}</textarea>
+          </div>`;
+        } else if (q.type === 'FILE_UPLOAD') {
+          typeSpecific = `<div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Allowed File Types *</label>
+              <input type="text" class="form-control" value="${q.allowedFileTypes||''}"
+                placeholder="e.g. pdf,docx,jpg"
+                oninput="questions[${idx}].allowedFileTypes=this.value">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Max File Size (MB) *</label>
+              <input type="number" class="form-control" value="${q.maxFileSizeMb||10}" min="1" max="100"
+                oninput="questions[${idx}].maxFileSizeMb=parseInt(this.value)||10">
+            </div>
+          </div>`;
+        }
+
+        return `<div class="question-card ${typeClass}">
+          <div class="q-header">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-size:18px;font-weight:800;color:var(--text-primary);">Q${idx+1}</span>
+              <span class="q-type-badge ${typeClass}">${typeLabel}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--page-bg);padding:6px 12px;border-radius:10px;border:1px solid var(--border-light);">
+              <label style="font-size:13px;font-weight:600;color:var(--text-muted);">Points</label>
+              <input type="number" class="form-control" style="width:70px;height:34px;padding:0 8px;font-size:14px;background:#fff;"
+                value="${q.points}" min="0.01" step="0.5"
+                oninput="questions[${idx}].points=parseFloat(this.value)||1;updateMarksIndicator()">
+              <input type="text" class="form-control" style="width:120px;height:34px;padding:0 8px;font-size:14px;background:#fff;"
+                value="${q.poolName||''}" placeholder="Pool (opt.)"
+                oninput="questions[${idx}].poolName=this.value.trim()"
+                title="Pool name for randomization">
+              <button onclick="removeQuestion(${q._id})" class="btn btn-sm btn-danger outline" style="padding:4px 8px;font-size:16px;" title="Remove question">✕</button>
+            </div>
+          </div>
+          <textarea class="form-control" rows="2" style="resize:vertical;font-size:15px;font-weight:500;"
+            placeholder="Write your question text here…"
+            oninput="questions[${idx}].text=this.value">${q.text||''}</textarea>
+          ${typeSpecific}
+        </div>`;
+      }).join('');
+    }
+
+    // ============================================================
+    // LOAD FOR EDIT
+    // ============================================================
+    async function loadExamForEdit() {
+      try {
+        const r = await apiCall(`/exams/${editId}`);
+        const e = r.data;
+        document.getElementById('courseId').value       = e.courseId;
+        document.getElementById('title').value          = e.title;
+        document.getElementById('description').value    = e.description || '';
+        document.getElementById('totalMarks').value     = e.totalMarks;
+        document.getElementById('passingGradePct').value = e.passingGradePct;
+        document.getElementById('timeLimitMinutes').value = e.timeLimitMinutes || '';
+        document.getElementById('maxAttempts').value    = e.maxAttempts || '';
+        if (e.availableFrom) document.getElementById('availableFrom').value = e.availableFrom.slice(0,16);
+        if (e.availableUntil) document.getElementById('availableUntil').value = e.availableUntil.slice(0,16);
+        document.getElementById('resultRelease').value  = e.resultRelease;
+        document.getElementById('useRandomization').checked = e.useRandomization;
+
+        questions = (e.questions || []).map(q => ({
+          _id: nextQId++,
+          type: q.questionType,
+          text: q.questionText,
+          points: parseFloat(q.points),
+          poolName: q.poolName || '',
+          rubric: q.rubric || '',
+          allowedFileTypes: q.allowedFileTypes || '',
+          maxFileSizeMb: q.maxFileSizeMb || 10,
+          shortAnswerMethod: q.shortAnswerMethod || 'MANUAL',
+          expectedAnswer: q.expectedAnswer || '',
+          options: (q.options || []).map(o => ({ text: o.optionText, correct: o.correct }))
+        }));
+        renderQuestions();
+        updateMarksIndicator();
+
+        // If ACTIVE, show view-only notice
+        if (e.status !== 'DRAFT') {
+          document.getElementById('save-btn').disabled = true;
+          document.getElementById('publish-btn').disabled = true;
+          const banner = document.createElement('div');
+          banner.className = 'alert';
+          banner.style = 'background:#fef9c3;border-color:#f59e0b;color:#78350f;margin-bottom:24px;border-radius:12px;';
+          banner.innerHTML = '⚠️ This exam is <strong>' + e.status + '</strong>. Only DRAFT exams can be edited.';
+          document.querySelector('.builder-layout').before(banner);
+        }
+      } catch(err) {
+        showToast('Failed to load exam: ' + err.message, 'error');
+      }
+    }
+
+    // ============================================================
+    // SAVE / PUBLISH
+    // ============================================================
+    async function saveExam(andPublish) {
+      hide(document.getElementById('error-banner'));
+
+      const body = {
+        courseId:         parseInt(document.getElementById('courseId').value) || null,
+        title:            document.getElementById('title').value.trim(),
+        description:      document.getElementById('description').value.trim() || null,
+        totalMarks:       parseFloat(document.getElementById('totalMarks').value) || 0,
+        passingGradePct:  parseFloat(document.getElementById('passingGradePct').value) || 50,
+        timeLimitMinutes: parseInt(document.getElementById('timeLimitMinutes').value) || null,
+        maxAttempts:      parseInt(document.getElementById('maxAttempts').value) || null,
+        availableFrom:    document.getElementById('availableFrom').value || null,
+        availableUntil:   document.getElementById('availableUntil').value || null,
+        resultRelease:    document.getElementById('resultRelease').value,
+        useRandomization: document.getElementById('useRandomization').checked,
+        questions: questions.map((q, idx) => ({
+          questionType:      q.type,
+          questionText:      q.text,
+          points:            q.points,
+          poolName:          q.poolName || null,
+          sortOrder:         idx,
+          rubric:            q.rubric || null,
+          allowedFileTypes:  q.allowedFileTypes || null,
+          maxFileSizeMb:     q.maxFileSizeMb || null,
+          shortAnswerMethod: q.shortAnswerMethod || 'MANUAL',
+          expectedAnswer:    q.expectedAnswer || null,
+          options: q.type === 'MCQ' ? q.options.map((o, oi) => ({
+            optionText: o.text, correct: o.correct, sortOrder: oi
+          })) : null
+        })),
+        poolConfigs: []
+      };
+
+      if (!body.courseId) { showError('Please select a course.'); return; }
+      if (!body.title)    { showError('Please enter an exam title.'); return; }
+      if (!questions.length) { showError('Please add at least one question.'); return; }
+
+      const btn = document.getElementById(andPublish ? 'publish-btn' : 'save-btn');
+      setLoading(btn, true, andPublish ? 'Publishing…' : 'Saving…');
+
+      try {
+        let saved;
+        if (isEdit) {
+          saved = await apiCall(`/exams/${editId}`, { method: 'PUT', body });
+        } else {
+          saved = await apiCall('/exams', { method: 'POST', body });
+        }
+        const examId = saved.data.id;
+
+        if (andPublish) {
+          await apiCall(`/exams/${examId}/publish`, { method: 'POST' });
+          showToast('Exam published!', 'success');
+        } else {
+          showToast('Exam saved as draft.', 'success');
+        }
+        setTimeout(() => window.location.href = 'exams.html', 900);
+      } catch(err) {
+        setLoading(btn, false);
+        showError(err.message || 'Save failed.');
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('error-text').textContent = msg;
+      show(document.getElementById('error-banner'));
+      document.getElementById('error-banner').scrollIntoView({behavior:'smooth', block:'center'});
+    }
+  </script>
+</body>
+</html>

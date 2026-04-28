@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grade Submissions — Hi-Tech LMS</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <style>
+    /* Split grading screen */
+    .grading-layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; }
+    .submission-list { background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 16px; overflow: hidden; height:fit-content; }
+    .submission-item {
+      padding: 16px 20px; border-bottom: 1px solid var(--border-light); cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center; transition:background 0.2s;
+    }
+    .submission-item:last-child { border-bottom:none; }
+    .submission-item:hover { background: var(--page-bg); }
+    .submission-item.active { background: var(--brand-light); border-left: 4px solid var(--brand-primary); padding-left:16px; }
+    .submission-name { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+    .submission-meta { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-top: 4px; }
+    /* Grade panel */
+    .grade-panel { padding: 32px; position: sticky; top: 96px; }
+    .question-to-grade { background: var(--page-bg); border: 1px solid var(--border-light); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+    .student-response { background: #fefce8; border: 1px solid #fef08a; border-radius: 10px; padding: 20px; font-size: 15px; color: #854d0e; white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow-y: auto; margin: 12px 0 24px 0; font-weight:500; line-height:1.6; }
+    .rubric-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px; font-size: 14px; font-weight:500; color: #166534; margin-bottom: 24px; line-height:1.5; }
+
+    @media(max-width:900px){ .grading-layout { grid-template-columns: 1fr; } .grade-panel { position: static; } }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="main-navbar"></nav>
+  <div id="toast-container"></div>
+
+  <main class="container page-content">
+    <div class="breadcrumb" style="margin-bottom:24px;">
+      <a href="dashboard.html">Dashboard</a> <span class="breadcrumb-sep">/</span>
+      <a href="exams.html">Exams</a> <span class="breadcrumb-sep">/</span>
+      <span id="crumb-exam">Grading Queue</span>
+    </div>
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 id="page-title">Grading Queue</h1>
+        <p id="page-subtitle">Manual grading for essay and file upload questions</p>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <a href="exams.html" class="btn btn-secondary">← Back</a>
+        <button class="btn btn-primary" id="release-btn" onclick="releaseResults()" style="display:none;">
+          🚀 Release Results
+        </button>
+      </div>
+    </div>
+
+    <div class="stats-grid" style="margin-bottom:32px;grid-template-columns:repeat(3,1fr);">
+      <div class="stat-card"><div class="stat-label">Total Submissions</div><div class="stat-value" id="stat-total">—</div></div>
+      <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" id="stat-pending" style="color:var(--danger);">—</div></div>
+      <div class="stat-card"><div class="stat-label">Graded</div><div class="stat-value" id="stat-graded" style="color:var(--success);">—</div></div>
+    </div>
+
+    <div id="loading" class="empty-state">
+      <p class="empty-state-title" style="font-size:18px;">Loading queue…</p>
+    </div>
+
+    <div id="grading-content" class="hidden">
+      <div class="grading-layout">
+        <!-- Left: submission list -->
+        <div>
+          <div class="submission-list" id="submission-list"></div>
+        </div>
+
+        <!-- Right: grading panel -->
+        <div class="content-card grade-panel" id="grade-panel">
+          <div class="empty-state" style="padding:40px 0; border:none; background:transparent;">
+            <div class="empty-state-icon" style="font-size:48px;">👆</div>
+            <p class="empty-state-title" style="font-size:20px;">Select a submission</p>
+            <p class="empty-state-sub">Choose a student from the list to begin grading.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer" style="margin-top:60px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+  </footer>
+
+  <script src="js/common.js"></script>
+  <script>
+    requireAuth();
+    if (!['ADMIN','INSTRUCTOR'].includes(getUserRole())) window.location.href = 'dashboard.html';
+    buildNavbar('exams');
+
+    const params = new URLSearchParams(location.search);
+    const examId = params.get('examId');
+    if (!examId) window.location.href = 'exams.html';
+
+    let queue = null;
+    let selectedAttemptIdx = -1;
+    let selectedQIdx = 0;
+
+    loadQueue();
+
+    async function loadQueue() {
+      try {
+        const r = await apiCall(`/exam-attempts/grade/${examId}`);
+        queue = r.data;
+        document.getElementById('crumb-exam').textContent = queue.examTitle;
+        document.getElementById('page-title').textContent = queue.examTitle;
+        document.getElementById('page-subtitle').textContent = `Course: ${queue.courseTitle}`;
+        document.getElementById('stat-total').textContent   = queue.totalSubmissions;
+        document.getElementById('stat-pending').textContent = queue.pendingCount;
+        document.getElementById('stat-graded').textContent  = queue.gradedCount;
+
+        if (queue.pendingCount === 0 && queue.totalSubmissions > 0) {
+          document.getElementById('release-btn').style.display = 'inline-flex';
+        }
+
+        hide(document.getElementById('loading'));
+        show(document.getElementById('grading-content'));
+        renderSubmissionList();
+      } catch(err) {
+        document.getElementById('loading').innerHTML = `<p style="color:var(--danger);text-align:center;padding:48px;">Error: ${err.message}</p>`;
+      }
+    }
+
+    function renderSubmissionList() {
+      const list = document.getElementById('submission-list');
+      if (!queue.submissions.length) {
+        list.innerHTML = '<div class="empty-state" style="border:none;"><p class="empty-state-title" style="font-size:16px;">No submissions yet.</p></div>';
+        return;
+      }
+      list.innerHTML = queue.submissions.map((s, idx) => {
+        const pending = s.pendingQuestions > 0;
+        const submitted = s.submittedAt
+          ? new Date(s.submittedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
+          : '—';
+        return `<div class="submission-item${selectedAttemptIdx===idx?' active':''}" onclick="selectSubmission(${idx})">
+          <div>
+            <div class="submission-name">${s.studentName}</div>
+            <div class="submission-meta">${s.studentEmail} <br> ${submitted}</div>
+          </div>
+          <div style="text-align:right;">
+            ${pending
+              ? `<span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;letter-spacing:0.05em;text-transform:uppercase;">${s.pendingQuestions} action</span>`
+              : '<span style="display:inline-block;background:#dcfce7;color:#166534;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;letter-spacing:0.05em;text-transform:uppercase;">Graded</span>'}
+            <div style="font-size:13px;font-weight:700;color:var(--text-body);margin-top:6px;">${Number(s.currentScore||0).toFixed(1)} pts</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function selectSubmission(idx) {
+      selectedAttemptIdx = idx;
+      selectedQIdx = 0;
+      renderSubmissionList();
+      renderGradePanel();
+    }
+
+    function renderGradePanel() {
+      const s = queue.submissions[selectedAttemptIdx];
+      if (!s) return;
+      const qs = s.questionsToGrade || [];
+      if (!qs.length) {
+        document.getElementById('grade-panel').innerHTML = `
+          <h3 style="font-size:20px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">${s.studentName}</h3>
+          <p class="text-muted">No manual grading needed for this submission. All questions are auto-graded.</p>`;
+        return;
+      }
+      const q = qs[selectedQIdx];
+      const isLast  = selectedQIdx >= qs.length - 1;
+      const isFirst = selectedQIdx === 0;
+
+      document.getElementById('grade-panel').innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;border-bottom:1px solid var(--border-light);padding-bottom:16px;">
+          <div>
+            <div style="font-size:18px;font-weight:800;color:var(--text-primary);">${s.studentName}</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-top:4px;">Question ${selectedQIdx+1} of ${qs.length}</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-sm btn-secondary outline" ${isFirst?'disabled':''} onclick="selectedQIdx--;renderGradePanel()">‹ Prev</button>
+            <button class="btn btn-sm btn-secondary outline" ${isLast?'disabled':''} onclick="selectedQIdx++;renderGradePanel()">Next ›</button>
+          </div>
+        </div>
+
+        <div class="question-to-grade">
+          <div style="font-size:12px;font-weight:800;color:var(--brand-primary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">
+            ${q.questionType.replace('_',' ')} <span style="color:var(--text-muted);">·</span> ${q.maxPoints} pts max
+          </div>
+          <div style="font-size:16px;font-weight:600;color:var(--text-primary);line-height:1.5;">${q.questionText}</div>
+        </div>
+
+        ${q.rubric ? `<div class="rubric-box"><span style="font-weight:800;">📋 Rubric:</span><br>${escHtml(q.rubric)}</div>` : ''}
+
+        <div style="font-size:13px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Student's Response</div>
+        <div class="student-response">${q.studentAnswer ? escHtml(q.studentAnswer) : '<em style="color:var(--text-muted);opacity:0.7;">No answer provided</em>'}</div>
+
+        <div class="form-group" style="margin-top:24px;">
+          <label class="form-label">Score (0 – ${q.maxPoints}) *</label>
+          <input type="number" id="grade-score" class="form-control" min="0" max="${q.maxPoints}" step="0.5"
+            value="${q.awardedScore || 0}" placeholder="Enter score…" style="max-width:200px;font-size:16px;font-weight:700;">
+        </div>
+        <div class="form-group" style="margin-bottom:24px;">
+          <label class="form-label">Feedback <span style="color:var(--text-muted);font-weight:400;">(optional — visible to student)</span></label>
+          <textarea id="grade-feedback" class="form-control" rows="3" placeholder="Write feedback for this student…"
+            style="resize:vertical;">${q.feedback || ''}</textarea>
+        </div>
+
+        <div style="display:flex;gap:12px;padding-top:16px;border-top:1px solid var(--border-light);">
+          <button class="btn btn-primary" id="grade-save-btn" onclick="saveGrade(${s.attemptId}, ${q.questionId})">
+            Save Grade
+          </button>
+          ${!isLast ? `<button class="btn btn-secondary" onclick="saveGradeAndNext(${s.attemptId}, ${q.questionId})">Save &amp; Next →</button>` : ''}
+          ${q.gradeStatus === 'MANUAL_GRADED' ? '<div style="margin-left:auto;align-self:center;font-size:13px;font-weight:700;color:var(--success);">✓ Previously graded</div>' : ''}
+        </div>`;
+    }
+
+    async function saveGrade(attemptId, questionId, andNext = false) {
+      const score    = parseFloat(document.getElementById('grade-score').value);
+      const feedback = document.getElementById('grade-feedback').value.trim();
+      if (isNaN(score)) { showToast('Please enter a valid score.', 'error'); return; }
+
+      const btn = document.getElementById('grade-save-btn');
+      setLoading(btn, true, 'Saving…');
+
+      try {
+        await apiCall(`/exam-attempts/${attemptId}/grade/${questionId}`, {
+          method: 'POST',
+          body: { score, feedback: feedback || null, isOverride: false }
+        });
+        showToast('Grade saved!', 'success');
+        await loadQueue();
+        // Re-select same submission
+        const newIdx = queue.submissions.findIndex(s => s.attemptId === attemptId);
+        if (newIdx >= 0) {
+          selectedAttemptIdx = newIdx;
+          if (andNext) selectedQIdx = Math.min(selectedQIdx + 1, (queue.submissions[newIdx].questionsToGrade || []).length - 1);
+          renderSubmissionList();
+          renderGradePanel();
+        }
+      } catch(err) {
+        showToast(err.message, 'error');
+        setLoading(btn, false);
+      }
+    }
+
+    function saveGradeAndNext(attemptId, questionId) {
+      saveGrade(attemptId, questionId, true);
+    }
+
+    async function releaseResults() {
+      if (!confirm('Release results to all students? They will be notified by email.')) return;
+      try {
+        await apiCall(`/exams/${examId}/release-results`, { method: 'POST' });
+        showToast('Results released! Students have been notified.', 'success');
+        document.getElementById('release-btn').style.display = 'none';
+      } catch(err) { showToast(err.message, 'error'); }
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam — Hi-Tech LMS</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <style>
+    /* Full-screen exam environment — no navbar links to prevent navigation */
+    body { background: var(--page-bg); }
+    .exam-topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 64px;
+      background: var(--card-bg); border-bottom: 1px solid var(--border-light);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; z-index: 200; box-shadow: 0 2px 12px rgba(0,0,0,.04);
+    }
+    .exam-title-bar { font-weight: 700; font-size: 16px; color: var(--text-primary); }
+    .exam-title-sub { font-size: 12px; color: var(--text-muted); margin-top:2px; }
+    .save-indicator { font-size: 12px; font-weight:600; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+    .save-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+    .save-dot.saving { background: var(--warning); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .timer {
+      font-size: 24px; font-weight: 800; color: var(--text-primary);
+      font-variant-numeric: tabular-nums; letter-spacing: 1px;
+    }
+    .timer.warning { color: var(--danger); animation: pulse .5s infinite; }
+
+    .exam-layout {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 24px;
+      max-width: 1100px;
+      margin: 96px auto 48px;
+      padding: 0 24px;
+    }
+
+    /* Question panel */
+    .question-panel { background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 16px; padding: 40px; box-shadow: 0 4px 16px rgba(0,0,0,.02); }
+    .q-progress { font-size: 13px; font-weight:600; color: var(--text-muted); margin-bottom: 8px; letter-spacing:0.05em; text-transform:uppercase; }
+    .q-points-badge {
+      display: inline-block; background: var(--brand-light); color: var(--brand-primary);
+      font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; margin-bottom: 16px;
+    }
+    .q-text { font-size: 18px; font-weight: 600; color: var(--text-primary); line-height: 1.6; margin-bottom: 24px; }
+    .mcq-option {
+      display: flex; align-items: center; gap: 14px; padding: 16px 20px;
+      border: 2px solid var(--border-light); border-radius: 12px; margin-bottom: 10px;
+      cursor: pointer; transition: border-color .2s, background .2s; font-size:15px; font-weight:500; color:var(--text-body);
+    }
+    .mcq-option:hover { border-color: var(--brand-primary); background: var(--brand-light); }
+    .mcq-option.selected { border-color: var(--brand-primary); background: var(--brand-light); color:var(--brand-primary); }
+    .mcq-option input[type=radio],
+    .mcq-option input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--brand-primary); flex-shrink:0; cursor:pointer; }
+    .text-answer { width: 100%; min-height: 60px; padding: 16px; border: 1px solid var(--border-subtle);
+      border-radius: 12px; font-size: 15px; resize: vertical; font-family: inherit; background:var(--page-bg); color:var(--text-body); transition:border-color 0.2s; }
+    .text-answer:focus { border-color:var(--brand-primary); outline:none; background:var(--card-bg); }
+    .essay-answer { min-height: 240px; }
+    .char-count { font-size: 12px; font-weight:600; color: var(--text-muted); text-align: right; margin-top: 8px; }
+
+    .flag-toggle {
+      display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight:600; color: var(--text-muted);
+      cursor: pointer; border: none; background: none; padding: 8px 12px; margin-top: 24px; border-radius:8px; transition:background 0.2s, color 0.2s;
+    }
+    .flag-toggle:hover { background: var(--page-bg); }
+    .flag-toggle.flagged { color: #d97706; background:#fef3c7; }
+
+    .q-nav-btns { display: flex; justify-content: space-between; margin-top: 32px; padding-top:24px; border-top:1px solid var(--border-subtle); }
+
+    /* Navigator sidebar */
+    .navigator { background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 16px; padding: 24px; height: fit-content; position: sticky; top: 96px; box-shadow: 0 4px 16px rgba(0,0,0,.02); }
+    .nav-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; }
+    .nav-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
+    .nav-btn {
+      aspect-ratio: 1; border-radius: 8px; border: 2px solid var(--border-light);
+      font-size: 13px; font-weight: 600; cursor: pointer; background: var(--card-bg);
+      color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition:all 0.2s;
+    }
+    .nav-btn:hover:not(.current) { background:var(--page-bg); border-color:var(--border-subtle); color:var(--text-body); }
+    .nav-btn.answered  { background: var(--success); border-color: var(--success); color: #fff; }
+    .nav-btn.flagged   { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+    .nav-btn.current   { border-color: var(--brand-primary); color: var(--brand-primary); font-weight: 800; box-shadow: 0 0 0 3px var(--brand-light); }
+    .nav-legend { display: flex; flex-direction: column; gap: 10px; font-size: 13px; font-weight:500; color: var(--text-body); margin-bottom: 20px; background:var(--page-bg); padding:16px; border-radius:10px; }
+    .nav-legend-item { display: flex; align-items: center; gap: 8px; }
+    .nav-dot { width: 14px; height: 14px; border-radius: 4px; }
+
+    /* Confirm modal */
+    .confirm-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter:blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999; display: none;
+    }
+    .confirm-overlay.show { display: flex; }
+    .confirm-box { background: var(--card-bg); border-radius: 20px; padding: 40px; max-width: 460px; width: 90%; box-shadow:0 10px 40px rgba(0,0,0,0.1); }
+
+    @media(max-width:768px){ .exam-layout { grid-template-columns:1fr; margin-top:80px; } .navigator { position:static; } }
+  </style>
+</head>
+<body>
+  <!-- Top bar (replaces full navbar during exam) -->
+  <div class="exam-topbar">
+    <div>
+      <div class="exam-title-bar" id="topbar-title">Loading exam…</div>
+      <div class="exam-title-sub" id="topbar-subtitle"></div>
+    </div>
+    <div class="save-indicator">
+      <div class="save-dot" id="save-dot"></div>
+      <span id="save-label">Saved</span>
+    </div>
+    <div class="timer" id="timer-display">--:--</div>
+    <button class="btn btn-danger" onclick="confirmSubmit()">Submit Exam</button>
+  </div>
+
+  <div class="exam-layout">
+    <!-- Main question panel -->
+    <div>
+      <div class="question-panel" id="question-panel">
+        <div style="text-align:center;padding:48px;color:var(--text-muted);">
+          <div class="empty-state-icon" style="font-size:48px;">📝</div>
+          <p class="empty-state-title" style="font-size:20px;">Loading questions…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigator sidebar -->
+    <div class="navigator">
+      <div class="nav-title">📋 Questions</div>
+      <div class="nav-grid" id="nav-grid"></div>
+      <div class="nav-legend">
+        <div class="nav-legend-item"><div class="nav-dot" style="background:var(--success);"></div> Answered</div>
+        <div class="nav-legend-item"><div class="nav-dot" style="background:#fef3c7;border:1px solid #f59e0b;"></div> Flagged</div>
+        <div class="nav-legend-item"><div class="nav-dot" style="background:#fff;border:2px solid var(--border-light);"></div> Unanswered</div>
+      </div>
+      <div style="font-size:14px;color:var(--text-muted);display:flex;justify-content:space-between;padding:0 8px;">
+        <span>Answered: <strong id="answered-count" style="color:var(--text-primary);font-weight:800;">0</strong></span>
+        <span>Total: <strong id="total-count" style="color:var(--text-primary);font-weight:800;">0</strong></span>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:24px;" onclick="confirmSubmit()">Submit Exam</button>
+    </div>
+  </div>
+
+  <!-- Submit confirmation modal -->
+  <div class="confirm-overlay" id="confirm-modal">
+    <div class="confirm-box">
+      <h2 style="font-size:24px;font-weight:800;margin-bottom:12px;color:var(--text-primary);">⚠️ Submit Exam?</h2>
+      <p id="confirm-msg" style="color:var(--text-body);margin-bottom:32px;font-size:15px;line-height:1.6;"></p>
+      <div style="display:flex;gap:16px;">
+        <button class="btn btn-danger" id="confirm-submit-btn" onclick="doSubmit()">Submit Exam</button>
+        <button class="btn btn-secondary" onclick="closeConfirmModal()">Return to Exam</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    requireAuth();
+    if (getUserRole() !== 'STUDENT') { window.location.href = 'dashboard.html'; }
+
+    const params    = new URLSearchParams(location.search);
+    const attemptId = params.get('attemptId');
+    if (!attemptId) { window.location.href = 'exams.html'; }
+
+    let attempt     = null;
+    let currentQ    = 0;        // 0-based index
+    let answers     = {};       // questionId → {answerText, flagged}
+    let timerInterval = null;
+    let autoSaveInterval = null;
+    let isSaving    = false;
+
+    // Anti-cheat event listeners (FR-5.2: logged, not blocked)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) logEvent('TAB_SWITCH');
+    });
+    window.addEventListener('blur', () => logEvent('FOCUS_LOSS'));
+
+    init();
+
+    async function init() {
+      try {
+        const r = await apiCall(`/exam-attempts/start/${getExamIdFromURL()}`, { method: 'POST' });
+        // NOTE: We need the exam ID — extract from URL or store it
+        // The backend returns the full attempt with questions
+        attempt = r.data;
+        attemptId; // already from URL params — but attempt.attemptId from response
+        // Update the global attemptId reference if needed
+        if (attempt.attemptId && attempt.attemptId.toString() !== attemptId) {
+          // Resume case — redirect to correct URL
+          window.location.href = `exam-take.html?attemptId=${attempt.attemptId}&examId=${attempt.examId}`;
+          return;
+        }
+        setupExam();
+      } catch(err) {
+        showError(err.message || 'Could not start exam.');
+      }
+    }
+
+    async function loadAttempt() {
+      // Called when we already have attemptId (resume flow)
+      // Re-use start endpoint (backend handles idempotency)
+      // Actually re-fetch via the auto-save endpoint just to get current data
+      // For simplicity, we load by starting again (which resumes existing attempt)
+    }
+
+    function getExamIdFromURL() {
+      return new URLSearchParams(location.search).get('examId');
+    }
+
+    function setupExam() {
+      // Populate saved answers from resumed attempt
+      (attempt.questions || []).forEach(q => {
+        answers[q.questionId] = { answerText: q.savedAnswer || '', flagged: q.flagged || false };
+      });
+
+      document.getElementById('topbar-title').textContent = attempt.examTitle;
+      document.getElementById('topbar-subtitle').textContent = `${attempt.totalQuestions} questions`;
+      document.getElementById('total-count').textContent  = attempt.totalQuestions;
+
+      startTimer();
+      renderQuestion(0);
+      renderNavigator();
+
+      // Auto-save every 30 seconds (FR-5.2)
+      autoSaveInterval = setInterval(() => autoSave(false), 30000);
+    }
+
+    // ============================================================
+    // TIMER
+    // ============================================================
+    function startTimer() {
+      if (!attempt.expiresAt) {
+        document.getElementById('timer-display').textContent = 'Untimed';
+        return;
+      }
+      const expiresAt = new Date(attempt.expiresAt).getTime();
+
+      timerInterval = setInterval(() => {
+        const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+        document.getElementById('timer-display').textContent = formatCountdown(remaining);
+
+        if (remaining < 300) {
+          document.getElementById('timer-display').classList.add('warning');
+        }
+        if (remaining === 0) {
+          clearInterval(timerInterval);
+          clearInterval(autoSaveInterval);
+          showToast('⏰ Time is up! Submitting your exam…', 'info', 3000);
+          setTimeout(() => doSubmit(), 2000);
+        }
+      }, 1000);
+    }
+
+    // ============================================================
+    // RENDER QUESTION
+    // ============================================================
+    function renderQuestion(idx) {
+      currentQ = idx;
+      const q = attempt.questions[idx];
+      const ans = answers[q.questionId] || { answerText: '', flagged: false };
+
+      let inputHtml = '';
+      if (q.questionType === 'MCQ') {
+        const opts = q.options || [];
+        const selectedIds = (ans.answerText || '').split(',').map(s=>s.trim()).filter(Boolean);
+        inputHtml = opts.map(o => {
+          const isSelected = selectedIds.includes(String(o.optionId));
+          return `<label class="mcq-option${isSelected?' selected':''}">
+            <input type="radio" name="mcq" value="${o.optionId}" ${isSelected?'checked':''}
+              onchange="selectMcqOption(${q.questionId}, this.value)">
+            ${o.optionText}
+          </label>`;
+        }).join('');
+      } else if (q.questionType === 'SHORT_ANSWER') {
+        inputHtml = `<input type="text" class="text-answer form-control" placeholder="Type your answer…"
+          value="${escHtml(ans.answerText||'')}"
+          oninput="updateAnswer(${q.questionId}, this.value)">`;
+      } else if (q.questionType === 'ESSAY') {
+        inputHtml = `<textarea class="text-answer essay-answer" placeholder="Write your essay here…"
+          oninput="updateAnswer(${q.questionId}, this.value);updateCharCount(this)"
+          >${escHtml(ans.answerText||'')}</textarea>
+          <div class="char-count" id="char-count-${q.questionId}">
+            ${(ans.answerText||'').length} characters
+          </div>`;
+      } else if (q.questionType === 'FILE_UPLOAD') {
+        inputHtml = `<div style="border:2px dashed var(--border-subtle);border-radius:12px;padding:40px;text-align:center;color:var(--text-muted);background:var(--page-bg);">
+          <div style="font-size:40px;margin-bottom:12px;">📎</div>
+          <p style="font-weight:500;color:var(--text-primary);margin-bottom:8px;">File upload is simulated in demo mode.</p>
+          <p style="font-size:13px;">Allowed: ${q.allowedFileTypes||'any'} · Max: ${q.maxFileSizeMb||10}MB</p>
+          <input type="text" class="form-control" placeholder="Enter filename (demo mode)…" style="margin-top:20px;max-width:320px;display:inline-block;background:var(--card-bg);"
+            value="${escHtml(ans.answerText||'')}"
+            oninput="updateAnswer(${q.questionId}, this.value)">
+        </div>`;
+      }
+
+      document.getElementById('question-panel').innerHTML = `
+        <div class="q-progress">Question ${idx+1} of ${attempt.totalQuestions}</div>
+        <span class="q-points-badge">${q.points} point${q.points===1?'':'s'}</span>
+        <div class="q-text">${q.questionText}</div>
+        ${inputHtml}
+        <button class="flag-toggle ${ans.flagged?'flagged':''}" id="flag-btn"
+          onclick="toggleFlag(${q.questionId})">
+          ${ans.flagged ? '🚩 Flagged for review' : '⚑ Flag for review'}
+        </button>
+        <div class="q-nav-btns">
+          <button class="btn btn-secondary outline" ${idx===0?'disabled':''} onclick="renderQuestion(${idx-1})">← Previous</button>
+          ${idx < attempt.totalQuestions-1
+            ? `<button class="btn btn-primary" onclick="renderQuestion(${idx+1})">Next →</button>`
+            : `<button class="btn btn-primary" onclick="confirmSubmit()">Submit Exam</button>`}
+        </div>`;
+
+      renderNavigator();
+    }
+
+    function selectMcqOption(questionId, optionId) {
+      answers[questionId] = { ...(answers[questionId]||{}), answerText: String(optionId) };
+      // Re-highlight options
+      document.querySelectorAll('.mcq-option').forEach(el => {
+        const inp = el.querySelector('input');
+        el.classList.toggle('selected', inp && inp.value === optionId);
+      });
+      renderNavigator();
+    }
+
+    function updateAnswer(questionId, text) {
+      answers[questionId] = { ...(answers[questionId]||{}), answerText: text };
+      renderNavigator();
+    }
+
+    function updateCharCount(textarea) {
+      const qId = attempt.questions[currentQ].questionId;
+      const el = document.getElementById(`char-count-${qId}`);
+      if (el) el.textContent = textarea.value.length + ' characters';
+    }
+
+    function toggleFlag(questionId) {
+      if (!answers[questionId]) answers[questionId] = { answerText: '', flagged: false };
+      answers[questionId].flagged = !answers[questionId].flagged;
+      const btn = document.getElementById('flag-btn');
+      if (btn) {
+        btn.classList.toggle('flagged', answers[questionId].flagged);
+        btn.textContent = answers[questionId].flagged ? '🚩 Flagged for review' : '⚑ Flag for review';
+      }
+      renderNavigator();
+    }
+
+    // ============================================================
+    // NAVIGATOR
+    // ============================================================
+    function renderNavigator() {
+      const grid = document.getElementById('nav-grid');
+      let answered = 0;
+      grid.innerHTML = attempt.questions.map((q, idx) => {
+        const ans = answers[q.questionId] || {};
+        const hasAnswer = !!(ans.answerText && ans.answerText.trim());
+        if (hasAnswer) answered++;
+        const cls = [
+          'nav-btn',
+          idx === currentQ ? 'current' : '',
+          ans.flagged ? 'flagged' : (hasAnswer ? 'answered' : '')
+        ].filter(Boolean).join(' ');
+        return `<button class="${cls}" onclick="renderQuestion(${idx})">${idx+1}</button>`;
+      }).join('');
+      document.getElementById('answered-count').textContent = answered;
+    }
+
+    // ============================================================
+    // AUTO-SAVE
+    // ============================================================
+    async function autoSave(isManual = false) {
+      if (isSaving || !attempt) return;
+      isSaving = true;
+      setSaveState('saving');
+
+      const answerList = Object.entries(answers).map(([qId, a]) => ({
+        questionId: parseInt(qId),
+        answerText: a.answerText || null,
+        flagged: !!a.flagged
+      }));
+
+      try {
+        await apiCall(`/exam-attempts/${attempt.attemptId}/autosave`, {
+          method: 'PATCH',
+          body: { answers: answerList, eventType: null }
+        });
+        setSaveState('saved');
+      } catch(e) {
+        setSaveState('error');
+      } finally {
+        isSaving = false;
+      }
+    }
+
+    function setSaveState(state) {
+      const dot   = document.getElementById('save-dot');
+      const label = document.getElementById('save-label');
+      if (state === 'saving') { dot.className='save-dot saving'; label.textContent='Saving…'; }
+      else if (state === 'saved') { dot.className='save-dot'; label.textContent='Saved'; }
+      else { dot.style.background='var(--danger)'; label.textContent='Save failed'; }
+    }
+
+    function logEvent(type) {
+      if (!attempt) return;
+      apiCall(`/exam-attempts/${attempt.attemptId}/autosave`, {
+        method: 'PATCH',
+        body: { answers: [], eventType: type }
+      }).catch(() => {});
+    }
+
+    // ============================================================
+    // SUBMIT
+    // ============================================================
+    function confirmSubmit() {
+      const total    = attempt.totalQuestions;
+      const answered = Object.values(answers).filter(a => a.answerText && a.answerText.trim()).length;
+      const unanswered = total - answered;
+      document.getElementById('confirm-msg').textContent =
+        unanswered > 0
+          ? `You have ${unanswered} unanswered question${unanswered===1?'':'s'}. Once submitted, you cannot change your answers.`
+          : 'All questions answered. Ready to submit?';
+      document.getElementById('confirm-modal').classList.add('show');
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('confirm-modal').classList.remove('show');
+    }
+
+    async function doSubmit() {
+      clearInterval(timerInterval);
+      clearInterval(autoSaveInterval);
+      closeConfirmModal();
+
+      // Final auto-save first
+      await autoSave(true);
+
+      const btn = document.getElementById('confirm-submit-btn');
+      if (btn) setLoading(btn, true, 'Submitting…');
+
+      try {
+        const r = await apiCall(`/exam-attempts/${attempt.attemptId}/submit`, { method: 'POST' });
+        const result = r.data;
+        if (result.resultsReleased || result.status === 'GRADED') {
+          window.location.href = `exam-results.html?attemptId=${attempt.attemptId}`;
+        } else {
+          window.location.href = `exam-submitted.html?attemptId=${attempt.attemptId}`;
+        }
+      } catch(err) {
+        showToast('Submission failed: ' + err.message, 'error');
+        if (btn) setLoading(btn, false);
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('question-panel').innerHTML =
+        `<div style="text-align:center;padding:48px;color:var(--danger);">
+          <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+          <p>${msg}</p>
+          <a href="exams.html" class="btn btn-secondary" style="margin-top:24px;">Back to Exams</a>
+        </div>`;
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>

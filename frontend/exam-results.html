@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Results — Hi-Tech LMS</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/theme.css">
+  <style>
+    .result-header {
+      background: linear-gradient(135deg, var(--brand-dark), var(--brand-primary));
+      color: #fff; border-radius: 20px; padding: 40px; margin-bottom: 32px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;
+      box-shadow: 0 10px 30px rgba(0, 173, 239, 0.2);
+    }
+    .result-score { font-size: 56px; font-weight: 800; line-height:1; }
+    .result-pct   { font-size: 24px; font-weight: 700; opacity: .9; margin-top:4px; }
+    .result-meta  { font-size: 14px; opacity: .8; margin-top: 12px; font-weight:500; }
+    .pending-notice {
+      background: #fefce8; border: 1px solid #fef08a; border-radius: 12px;
+      padding: 20px 24px; margin-bottom: 24px; color: #854d0e; font-size:15px; font-weight:500; line-height:1.6;
+    }
+    .q-result-card {
+      background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 16px;
+      padding: 24px; margin-bottom: 16px; box-shadow:0 2px 8px rgba(0,0,0,0.02);
+      border-left: 4px solid var(--border-light);
+    }
+    .q-result-card.correct  { border-left-color: var(--success); }
+    .q-result-card.incorrect { border-left-color: var(--danger); }
+    .q-result-card.pending  { border-left-color: var(--warning); }
+    .q-result-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .q-result-text   { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; line-height:1.6; }
+    .answer-box { background: var(--page-bg); border-radius: 10px; padding: 16px; font-size: 14px; font-weight:500; color:var(--text-body); margin-top: 12px; border:1px solid var(--border-light); }
+    .answer-box .label { font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+    .correct-answer { background: #f0fdf4; border-color: #bbf7d0; color:#166534; }
+    .correct-answer .label { color: #166534; opacity:0.8; }
+    .feedback-box { background: #f0f9ff; border-left: 4px solid var(--brand-primary); border-radius: 10px; padding: 16px; margin-top: 16px; font-size: 14px; font-weight:500; color: #0369a1; }
+    
+    @media(max-width:768px){ .result-header { flex-direction:column; align-items:flex-start; } .result-header > div:last-child { text-align:left; } }
+  </style>
+</head>
+<body>
+  <nav class="navbar" id="main-navbar"></nav>
+  <div id="toast-container"></div>
+
+  <main class="container page-content" style="max-width:900px;">
+    <div class="breadcrumb" style="margin-bottom:24px;">
+      <a href="dashboard.html">Dashboard</a> <span class="breadcrumb-sep">/</span>
+      <a href="exams.html">Exams</a> <span class="breadcrumb-sep">/</span>
+      <span style="color:var(--text-primary);font-weight:600;">Results</span>
+    </div>
+
+    <div id="loading" class="empty-state">
+      <p class="empty-state-title" style="font-size:18px;">Loading results…</p>
+    </div>
+
+    <div id="results-content" class="hidden">
+      <!-- Result header -->
+      <div class="result-header">
+        <div>
+          <div style="font-size:16px;font-weight:700;opacity:.9;margin-bottom:6px;" id="res-exam-title"></div>
+          <div style="font-size:14px;font-weight:500;opacity:.8;" id="res-course-title"></div>
+          <div class="result-meta" id="res-meta"></div>
+        </div>
+        <div style="text-align:right;">
+          <div class="result-score" id="res-score"></div>
+          <div class="result-pct"  id="res-pct"></div>
+          <div id="pass-fail-badge" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- Pending notice if not released -->
+      <div id="pending-notice" class="pending-notice hidden">
+        ⏳ <strong style="font-weight:800;color:#713f12;">Results are under review.</strong> Your instructor is grading your submission.
+        You'll receive an email when results are available. The breakdown below may be incomplete.
+      </div>
+
+      <!-- Per-question breakdown -->
+      <h2 style="font-size:20px;font-weight:800;color:var(--text-primary);margin-bottom:20px;padding-top:12px;border-top:1px solid var(--border-light);">Question Breakdown</h2>
+      <div id="question-breakdown"></div>
+
+      <div style="margin-top:40px;display:flex;gap:16px;flex-wrap:wrap;">
+        <a href="exams.html" class="btn btn-primary">← Back to Exams</a>
+        <button class="btn btn-secondary outline" onclick="window.print()">🖨 Print Results</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer" style="margin-top:60px;">
+    <div class="container">
+        <div class="footer-copy">&copy; 2026 Hi-Tech Institute. All rights reserved.</div>
+        <div class="footer-links">
+            <a href="#">Support</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+        </div>
+    </div>
+  </footer>
+
+  <script src="js/common.js"></script>
+  <script>
+    requireAuth();
+    buildNavbar('exams');
+    const params    = new URLSearchParams(location.search);
+    const attemptId = params.get('attemptId');
+
+    if (!attemptId) { window.location.href = 'exams.html'; }
+    loadResults();
+
+    async function loadResults() {
+      try {
+        const r = await apiCall(`/exam-attempts/${attemptId}/results`);
+        const res = r.data;
+        renderResults(res);
+      } catch(err) {
+        document.getElementById('loading').innerHTML =
+          `<div class="empty-state"><p class="empty-state-title" style="color:var(--danger);font-size:16px;">Failed to load results: ${err.message}</p></div>`;
+      }
+    }
+
+    function renderResults(res) {
+      hide(document.getElementById('loading'));
+      show(document.getElementById('results-content'));
+
+      document.getElementById('res-exam-title').textContent   = res.examTitle;
+      document.getElementById('res-course-title').textContent = res.courseTitle;
+
+      const submitted = res.submittedAt
+        ? new Date(res.submittedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
+        : '—';
+      const duration = res.startedAt && res.submittedAt
+        ? Math.round((new Date(res.submittedAt)-new Date(res.startedAt))/60000) + ' min'
+        : '—';
+      document.getElementById('res-meta').textContent = `Submitted: ${submitted} · Duration: ${duration}`;
+
+      const pct = res.percentage ? Number(res.percentage).toFixed(1) + '%' : '—';
+      const score = res.totalScore != null ? `${Number(res.totalScore).toFixed(1)} / ${Number(res.totalMarks).toFixed(1)}` : '—';
+      document.getElementById('res-score').textContent = score;
+      document.getElementById('res-pct').textContent   = pct;
+
+      if (res.status === 'GRADED' && res.resultsReleased) {
+        document.getElementById('pass-fail-badge').innerHTML = getPassFailBadge(res.passed);
+      } else {
+        document.getElementById('pending-notice').classList.remove('hidden');
+      }
+
+      const breakdown = document.getElementById('question-breakdown');
+      breakdown.innerHTML = (res.questionResults || []).map((qr, idx) => {
+        const gs = qr.gradeStatus || 'MANUAL_PENDING';
+        const cardClass = gs === 'CORRECT' ? 'correct' : gs === 'INCORRECT' ? 'incorrect' : 'pending';
+        
+        let pillClass = '';
+        if (gs === 'CORRECT') pillClass = 'badge badge-active';
+        else if (gs === 'INCORRECT') pillClass = 'badge badge-draft';
+        else pillClass = 'badge badge-inactive';
+        
+        const points = qr.pointsEarned != null
+          ? `${Number(qr.pointsEarned).toFixed(1)} / ${Number(qr.maxPoints).toFixed(1)}`
+          : `— / ${Number(qr.maxPoints).toFixed(1)}`;
+
+        let answerHtml = '';
+        if (qr.studentAnswer) {
+          answerHtml += `<div class="answer-box"><div class="label">Your Answer</div>${escHtml(qr.studentAnswer)}</div>`;
+        }
+        if (qr.correctAnswer && res.resultsReleased) {
+          answerHtml += `<div class="answer-box correct-answer"><div class="label">Correct Answer</div>${escHtml(qr.correctAnswer)}</div>`;
+        }
+        if (qr.feedback && res.resultsReleased) {
+          answerHtml += `<div class="feedback-box"><strong style="font-weight:800;text-transform:uppercase;font-size:12px;letter-spacing:0.05em;display:block;margin-bottom:4px;">💬 Instructor Feedback</strong> ${escHtml(qr.feedback)}</div>`;
+        }
+
+        return `<div class="q-result-card ${cardClass}">
+          <div class="q-result-header">
+            <div>
+              <span style="font-size:14px;font-weight:800;color:var(--text-primary);margin-right:8px;">Q${idx+1}</span>
+              <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">${qr.questionType.replace('_',' ')}</span>
+            </div>
+            <span class="${pillClass}" style="font-size:12px;padding:4px 12px;">${getGradeStatusBadge(gs)} &nbsp;·&nbsp; ${points} pts</span>
+          </div>
+          <div class="q-result-text">${qr.questionText}</div>
+          ${answerHtml}
+        </div>`;
+      }).join('');
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
+</body>
+</html>
